@@ -23,5 +23,9 @@ def read_uri_data(uri: str, relative_to: Path | None = None):
     )
 
 
+def guess_extension(mime_type: str, default: str = ".bin"):
+    return mimetypes.guess_extension(mime_type) or default
+
+
 def encode_data_uri(data: bytes, mime_type: str = "application/octet-stream"):
     return f"data:{mime_type};base64,{base64.b64encode(data).decode()}"
