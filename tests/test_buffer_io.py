@@ -1,0 +1,309 @@
+import operator
+from functools import reduce
+from struct import pack
+from typing import Any
+
+import numpy as np
+from numpy.typing import NDArray
+from pytest import mark, raises
+
+from glutenfreebakery.buffers import BufferBuilder, array_from_accessor
+from glutenfreebakery.gltf import Gltf2
+from glutenfreebakery.schema import (
+    Accessor,
+    AccessorType,
+    Attributes,
+    BufferView,
+    ComponentType,
+    DataBuffer,
+    Mesh,
+    Mode,
+    Node,
+    Primitive,
+    Scene,
+    Target,
+)
+
+
+def sample_arrays():
+    for dtype, expected_component_type in [
+        (np.byte, ComponentType.BYTE),
+        (np.ubyte, ComponentType.UNSIGNED_BYTE),
+        (np.short, ComponentType.SHORT),
+        (np.ushort, ComponentType.UNSIGNED_SHORT),
+        (np.uint32, ComponentType.UNSIGNED_INT),
+        (np.uint64, ComponentType.UNSIGNED_INT),
+        (np.float32, ComponentType.FLOAT),
+        (np.float64, ComponentType.FLOAT),
+    ]:
+        for shape, expected_type in [
+            ((8,), AccessorType.SCALAR),
+            ((8, 2), AccessorType.VEC2),
+            ((8, 3), AccessorType.VEC3),
+            ((8, 4), AccessorType.VEC4),
+            ((8, 2, 2), AccessorType.MAT2),
+            ((8, 3, 3), AccessorType.MAT3),
+            ((8, 4, 4), AccessorType.MAT4),
+        ]:
+            array = np.array(list(range(reduce(operator.mul, shape))), dtype).reshape(
+                shape
+            )
+            if dtype in (np.float32,):
+                array /= 7
+            yield array, expected_type, expected_component_type
+            yield array, expected_type, expected_component_type
+
+
+@mark.parametrize("array, expected_type, expected_component_type", sample_arrays())
+def test_add_array(
+    array: NDArray[Any],
+    expected_type: AccessorType,
+    expected_component_type: ComponentType,
+):
+    builder = BufferBuilder()
+    accessor = builder.add_array(array)
+
+    assert accessor.type == expected_type
+    assert accessor.componentType == expected_component_type
+    assert np.all(array == array_from_accessor(accessor))
+
+
+def test_add_indices_array():
+    a = BufferBuilder().add_indices_array(np.array([1, 2, 3]))
+    assert a.type == AccessorType.SCALAR
+    assert a.componentType == ComponentType.UNSIGNED_INT
+
+
+def test_add_element_array():
+    a = BufferBuilder().add_element_array(np.array([1, 2, 3]))
+    assert a.bufferView and a.bufferView.target == Target.ELEMENT_ARRAY_BUFFER
+    assert a.componentType == ComponentType.UNSIGNED_INT
+
+
+def test_add_array_errors():
+    with raises(ValueError) as e:
+        BufferBuilder().add_array(np.array([[1, 2, 3, 4, 5], [1, 2, 3, 4, 5]]))
+    assert "could not guess accessor type" in str(e)
+
+    with raises(ValueError) as e:
+        BufferBuilder().add_array(np.array([1j, 2, 3j, 4, 5j], np.complex64))  # type: ignore
+    assert "could not guess component type" in str(e)
+
+
+def test_trisrip_cube_buffer_builder():
+    tristrip_cube = [
+        (-1, +1, +1),
+        (+1, +1, +1),
+        (-1, -1, +1),
+        (+1, -1, +1),
+        (+1, -1, -1),
+        (+1, +1, +1),
+        (+1, +1, -1),
+        (-1, +1, +1),
+        (-1, +1, -1),
+        (-1, -1, +1),
+        (-1, -1, -1),
+        (+1, -1, -1),
+        (-1, +1, -1),
+        (+1, +1, -1),
+    ]
+    b = BufferBuilder()
+
+    gltf = Gltf2(
+        scene=Scene(
+            nodes=[
+                Node(
+                    mesh=Mesh(
+                        primitives=[
+                            Primitive(
+                                Attributes(
+                                    POSITION=b.add_array(
+                                        np.array(tristrip_cube, dtype=np.float32)
+                                    )
+                                ),
+                                mode=Mode.TRIANGLE_STRIP,
+                            )
+                        ]
+                    ),
+                    extras={"lorem": "ipsum"},
+                )
+            ]
+        ),
+        extras={"hello": "world"},
+    )
+
+    assert gltf.dump() == {
+        "asset": {"version": "2.0", "generator": "glutenfreebakery"},
+        "extras": {"hello": "world"},
+        "scene": 0,
+        "accessors": [
+            {
+                "componentType": 5126,
+                "count": 14,
+                "type": "VEC3",
+                "bufferView": 0,
+                "min": [-1.0, -1.0, -1.0],
+                "max": [1.0, 1.0, 1.0],
+            }
+        ],
+        "buffers": [
+            {
+                "byteLength": 168,
+                "uri": "data:application/gltf-buffer;base64,AACAvwAAgD8AAIA/AACAPwAAgD8AAIA/AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgL8AAIC/AACAPwAAgD8AAIA/AACAPwAAgD8AAIC/AACAvwAAgD8AAIA/AACAvwAAgD8AAIC/AACAvwAAgL8AAIA/AACAvwAAgL8AAIC/AACAPwAAgL8AAIC/AACAvwAAgD8AAIC/AACAPwAAgD8AAIC/",
+            }
+        ],
+        "bufferViews": [{"buffer": 0, "byteLength": 168, "target": 34962}],
+        "meshes": [{"primitives": [{"attributes": {"POSITION": 0}, "mode": 5}]}],
+        "nodes": [{"mesh": 0, "extras": {"lorem": "ipsum"}}],
+        "scenes": [{"nodes": [0]}],
+    }
+
+
+def test_interleaving():
+    data = b"lorem"
+    for i in range(1, 3):
+        data += pack("<fffffb", i + 0.1, i + 0.2, i + 0.3, i + 0.4, i + 0.5, i)
+    data += b"ipsum"
+
+    bufferView = BufferView(
+        buffer=DataBuffer(data),
+        byteLength=len(data),
+        byteOffset=5,
+        byteStride=3 * 4 + 2 * 4 + 1,
+    )
+    accessor1 = Accessor(
+        componentType=ComponentType.FLOAT,
+        count=2,
+        type=AccessorType.VEC3,
+        bufferView=bufferView,
+        byteOffset=0,
+    )
+    accessor2 = Accessor(
+        componentType=ComponentType.FLOAT,
+        count=2,
+        type=AccessorType.VEC2,
+        bufferView=bufferView,
+        byteOffset=3 * 4,
+    )
+    accessor3 = Accessor(
+        componentType=ComponentType.BYTE,
+        count=2,
+        type=AccessorType.SCALAR,
+        bufferView=bufferView,
+        byteOffset=3 * 4 + 2 * 4,
+    )
+
+    expected1 = np.array([[1.1, 1.2, 1.3], [2.1, 2.2, 2.3]], np.float32)
+    expected2 = np.array([[1.4, 1.5], [2.4, 2.5]], np.float32)
+    expected3 = np.array([1, 2], np.byte)
+
+    assert np.all(array_from_accessor(accessor1) == expected1)
+    assert np.all(array_from_accessor(accessor2) == expected2)
+    assert np.all(array_from_accessor(accessor3) == expected3)
+
+
+def test_read_sparse_accessor():
+    expected = np.array(
+        [
+            [0, 0, 0],
+            [1, 0, 0],
+            [2, 0, 0],
+            [3, 0, 0],
+            [4, 0, 0],
+            [5, 0, 0],
+            [6, 0, 0],
+            [0, 1, 0],
+            [1, 2, 0],
+            [2, 1, 0],
+            [3, 3, 0],
+            [4, 1, 0],
+            [5, 4, 0],
+            [6, 1, 0],
+        ],
+        np.float32,
+    )
+    gltf = gltfTutorial_005_BuffersBufferViewsAccessors()
+    assert np.all(array_from_accessor(gltf.accessors[1]) == expected)
+
+
+def test_read_sparse_accessor_no_view():
+    expected = np.array(
+        [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [1, 2, 0],
+            [0, 0, 0],
+            [3, 3, 0],
+            [0, 0, 0],
+            [5, 4, 0],
+            [0, 0, 0],
+        ],
+        np.float32,
+    )
+    gltf = gltfTutorial_005_BuffersBufferViewsAccessors()
+    gltf.accessors[1].bufferView = None
+    assert np.all(array_from_accessor(gltf.accessors[1]) == expected)
+
+
+def gltfTutorial_005_BuffersBufferViewsAccessors():
+    """from https://github.com/KhronosGroup/glTF-Tutorials/blob/main/gltfTutorial/gltfTutorial_005_BuffersBufferViewsAccessors.md#sparse-accessors"""
+    data = {
+        "scenes": [{"nodes": [0]}],
+        "nodes": [{"mesh": 0}],
+        "meshes": [{"primitives": [{"attributes": {"POSITION": 1}, "indices": 0}]}],
+        "buffers": [
+            {
+                "uri": "data:application/gltf-buffer;base64,"
+                "AAAIAAcAAAABAAgAAQAJAAgAAQACAAkAAgAKAAkAAgADAAoAAwALAAoAAwAEAAsABAAMAA"
+                "sABAAFAAwABQANAAwABQAGAA0AAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAQAAAAAAA"
+                "AAAAAABAQAAAAAAAAAAAAACAQAAAAAAAAAAAAACgQAAAAAAAAAAAAADAQAAAAAAAAAAAAA"
+                "AAAAAAgD8AAAAAAACAPwAAgD8AAAAAAAAAQAAAgD8AAAAAAABAQAAAgD8AAAAAAACAQAAA"
+                "gD8AAAAAAACgQAAAgD8AAAAAAADAQAAAgD8AAAAACAAKAAwAAAAAAIA/AAAAQAAAAAAAAE"
+                "BAAABAQAAAAAAAAKBAAACAQAAAAAA=",
+                "byteLength": 284,
+            }
+        ],
+        "bufferViews": [
+            {"buffer": 0, "byteOffset": 0, "byteLength": 72, "target": 34963},
+            {"buffer": 0, "byteOffset": 72, "byteLength": 168},
+            {"buffer": 0, "byteOffset": 240, "byteLength": 6},
+            {"buffer": 0, "byteOffset": 248, "byteLength": 36},
+        ],
+        "accessors": [
+            {
+                "bufferView": 0,
+                "byteOffset": 0,
+                "componentType": 5123,
+                "count": 36,
+                "type": "SCALAR",
+                "max": [13],
+                "min": [0],
+            },
+            {
+                "bufferView": 1,
+                "byteOffset": 0,
+                "componentType": 5126,
+                "count": 14,
+                "type": "VEC3",
+                "max": [6.0, 4.0, 0.0],
+                "min": [0.0, 0.0, 0.0],
+                "sparse": {
+                    "count": 3,
+                    "indices": {
+                        "bufferView": 2,
+                        "byteOffset": 0,
+                        "componentType": 5123,
+                    },
+                    "values": {"bufferView": 3, "byteOffset": 0},
+                },
+            },
+        ],
+        "asset": {"version": "2.0"},
+    }
+    return Gltf2.Load(data)
