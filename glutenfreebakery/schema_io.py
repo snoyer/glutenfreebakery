@@ -91,7 +91,7 @@ def read_glb(src: BinaryIO | Path | str, root: GltfRootT) -> GltfRootT:
                     if bufferView.buffer == empty_data_buffer:
                         bufferView.buffer = new_data_buffer
         else:
-            logger.warning("unknown chunk type %x", chunk_type)
+            logger.warning("unknown chunk type %r", chunk_type)
 
     return root
 

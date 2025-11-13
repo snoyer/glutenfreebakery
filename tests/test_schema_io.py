@@ -1,11 +1,13 @@
+import logging
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from urllib.error import URLError
 
-from pytest import raises
+from pytest import LogCaptureFixture, raises
 
-from glutenfreebakery.schema import GltfRoot
+from glutenfreebakery.gltf import Gltf2
+from glutenfreebakery.schema import DataBuffer, GltfRoot
 from glutenfreebakery.schema_io import (
     BIN_CHUNK_TYPE,
     JSON_CHUNK_TYPE,
@@ -126,10 +128,21 @@ def test_write_glb_chunks():
     )
 
 
-def test_read_unknown_chunk():
+def test_read_unknown_chunk(caplog: LogCaptureFixture):
     buf = BytesIO(
-        b'glTF\x02\x00\x00\x00@\x00\x00\x00 \x00\x00\x00JSON{"buffers":[{"byteLength'
-        b'":"4"}]}\x04\x00\x00\x00BIN\x00123\x00'
+        b"glTF\x02\x00\x00\x00K\x00\x00\x00 \x00\x00\x00"
+        b'JSON{"buffers":[{"byteLength":"4"}]}\x04\x00\x00\x00'
+        b"BIN\x00123\x00\x03\x00\x00\x00blahabc"
     )
-    root = GltfRoot()
-    read_glb(buf, root)
+    with caplog.at_level(logging.WARNING):
+        root = GltfRoot()
+        read_glb(buf, root)
+    assert "unknown chunk type b'blah'" in caplog.text
+
+
+def test_write_glb_multiple_data_buffers():
+    gltf = Gltf2()
+    gltf.buffers += (DataBuffer(b"123"), DataBuffer(b"abc"))
+    with raises(IOError) as e:
+        gltf.write(BytesIO())
+    assert "only the first buffer can be a data buffer" in str(e)
