@@ -359,16 +359,17 @@ def _iter_fields_and_types(cls: Type[Any]):
 
 @lru_cache
 def _types_from_hint(hint: Any):
+
+    def types() -> Iterator[Type[Any]]:
+        if isinstance(hint, UnionType):
+            yield from map(_arg_type, get_args(hint))
+        elif isclass(hint):
+            yield _arg_type(hint)
+
     prop_ts: list[type[GltfProperty]] = []
     any_ts: list[type[Any]] = []
-
-    if isinstance(hint, UnionType):
-        for x in map(_arg_type, get_args(hint)):
-            (prop_ts if issubclass(x, GltfProperty) else any_ts).append(x)
-    elif isclass(hint):
-        x = _arg_type(hint)
-        (prop_ts if issubclass(x, GltfProperty) else any_ts).append(x)
-
+    for t in types():
+        (prop_ts if isclass(t) and issubclass(t, GltfProperty) else any_ts).append(t)
     return prop_ts, any_ts
 
 
