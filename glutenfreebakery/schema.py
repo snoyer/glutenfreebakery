@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from enum import Enum, IntEnum
+from itertools import chain
 from typing import Any, Iterator, Literal, TypeVar
 
 from attrs import Attribute, define, field, fields
@@ -48,6 +49,15 @@ GltfPropertyT2 = TypeVar("GltfPropertyT2", bound=GltfProperty)
 
 class PropertyArray(PartiallyImplicitList[T, GltfPropertyT]):
     pass
+
+
+def _fix_prop_array(
+    instance: Any, attribute: Attribute[Any], value: Any
+) -> PropertyArray[Any, Any]:
+    converted = attribute.converter(value)  # type: ignore
+    if isinstance(converted, PropertyArray):
+        converted.parent = instance
+    return converted
 
 
 class GltfPropertyArray(PropertyArray[GltfPropertyT, GltfPropertyT2]):
@@ -447,16 +457,26 @@ class AnimationChannels(GltfPropertyArray["AnimationChannel", "Animation"]):
 
 
 class AnimationSamplers(GltfPropertyArray["AnimationSampler", "Animation"]):
-    pass
+    def _from_parent(self, parent: Animation):
+        for channel in parent.channels:
+            yield channel.sampler
 
 
 @define
 class Animation(GltfChildOfRootProperty):
     """A keyframe animation."""
 
-    channels: AnimationChannels
+    channels: AnimationChannels = field(
+        factory=AnimationChannels,
+        converter=AnimationChannels,
+        on_setattr=_fix_prop_array,
+    )
     """An array of animation channels. An animation channel combines an animation sampler with a target property being animated. Different channels of the same animation **MUST NOT** have the same targets."""
-    samplers: AnimationSamplers = field(factory=AnimationSamplers)
+    samplers: AnimationSamplers = field(
+        factory=AnimationSamplers,
+        converter=AnimationSamplers,
+        on_setattr=_fix_prop_array,
+    )
     """An array of animation samplers. An animation sampler combines timestamps with a sequence of output values and defines an interpolation algorithm."""
 
 
@@ -562,6 +582,14 @@ class Accessors(GltfChildOfRootPropertyArray[Accessor]):
             for primitive in mesh.primitives:
                 yield primitive.indices
                 yield from primitive.attributes.values()
+        for skin in parent.skins:
+            yield skin.inverseBindMatrices
+        for animation in parent.animations:
+            for sampler in chain(
+                animation.samplers, (channel.sampler for channel in animation.channels)
+            ):
+                yield sampler.input
+                yield sampler.output
 
 
 class BufferViews(GltfChildOfRootPropertyArray[BufferView]):
@@ -653,15 +681,6 @@ class ExtensionsUsed(PropertyArray[str, "GltfRoot"]):
 class ExtensionsRequired(PropertyArray[str, "GltfRoot"]):
     def __iter__(self):
         return iter(sorted(list(super().__iter__())))
-
-
-def _fix_prop_array(
-    instance: Any, attribute: Attribute[Any], value: Any
-) -> PropertyArray[Any, Any]:
-    converted = attribute.converter(value)  # type: ignore
-    if isinstance(converted, PropertyArray):
-        converted.parent = instance
-    return converted
 
 
 @define(kw_only=True)

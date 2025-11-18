@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from enum import Enum
 from functools import lru_cache
 from inspect import isclass
+from itertools import chain
 from pathlib import Path
 from struct import pack, unpack
 from types import GenericAlias, UnionType
@@ -228,6 +229,13 @@ def _fix_prop(o: GltfProperty, data: Any):
     elif isinstance(o, (SparseIndices, SparseValues, Image)):
         if isinstance(o.bufferView, int):
             o.bufferView = data["bufferViews"][o.bufferView]
+
+    elif isinstance(o, Animation):
+        for sampler in chain(o.samplers, (channel.sampler for channel in o.channels)):
+            if isinstance(sampler.input, int):
+                sampler.input = data["accessors"][sampler.input]
+            if isinstance(sampler.output, int):
+                sampler.output = data["accessors"][sampler.output]
 
     elif isinstance(o, Texture):
         if isinstance(o.sampler, int):
