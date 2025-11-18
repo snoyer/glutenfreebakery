@@ -76,8 +76,9 @@ class BufferBuilder:
         array: NDArray[NP_TYPES],
         accessorType: AccessorType | None = None,
         componentType: ComponentType | None = None,
+        target: Target | None = Target.ARRAY_BUFFER,
     ):
-        return self.add(array, accessorType, componentType, Target.ARRAY_BUFFER)
+        return self.add(array, accessorType, componentType, target=target)
 
     def add_indices_array(
         self,
