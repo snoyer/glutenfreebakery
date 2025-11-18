@@ -592,11 +592,16 @@ class Meshes(GltfChildOfRootPropertyArray[Mesh]):
 
 class Nodes(GltfChildOfRootPropertyArray[Node]):
     def _from_parent(self, parent: GltfRoot) -> Iterator[Node | None]:
+        seen = set()
         for scene in parent.scenes:
-            for node in scene.nodes:
-                yield node
-                if children := node.children:
-                    yield from children
+            q = list(scene.nodes)
+            while q:
+                node = q.pop()
+                if id(node) not in seen:
+                    seen.add(id(node))
+                    yield node
+                    if children := node.children:
+                        q = children + q
 
 
 class Textures(GltfChildOfRootPropertyArray[Texture]):
