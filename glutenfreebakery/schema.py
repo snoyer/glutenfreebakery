@@ -7,7 +7,11 @@ from typing import Any, Iterator, Literal, TypeVar
 
 from attrs import Attribute, define, field, fields
 
-from .schema_boilerplate import PartiallyImplicitList
+from .schema_boilerplate import (
+    PartiallyImplicitList,
+    list_converter,
+    optional_list_converter,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -401,7 +405,7 @@ class Primitive(GltfProperty):
 
 @define
 class Mesh(GltfChildOfRootProperty):
-    primitives: list[Primitive] = field(factory=list)
+    primitives: list[Primitive] = field(factory=list, converter=list_converter)
     """An array of primitives, each defining geometry to be rendered."""
     weights: list[float] | None = None
     """Array of weights to be applied to the morph targets. The number of array elements **MUST** match the number of morph targets."""
@@ -523,7 +527,7 @@ class AnimationSamplerIterpolation(Enum):
 class Skin(GltfChildOfRootProperty):
     """Joints and matrices defining a skin."""
 
-    joints: list[Node]
+    joints: list[Node] = field(converter=list_converter)
     """~~Indices of~~ skeleton nodes, used as joints in this skin."""
     inverseBindMatrices: Accessor | None = None
     """The ~~index of the~~ accessor containing the floating-point 4x4 inverse-bind matrices. Its `accessor.count` property **MUST** be greater than or equal to the number of elements of the `joints` array. When undefined, each matrix is a 4x4 identity matrix."""
@@ -539,7 +543,7 @@ class Node(GltfChildOfRootProperty):
     """"The ~~index of the~~ skin referenced by this node. When a skin is referenced by a node within a scene, all joints used by the skin **MUST** belong to the same scene. When defined, `mesh` **MUST** also be defined."""
     mesh: Mesh | None = None
     """The ~~index of the~~ mesh in this node."""
-    children: list[Node] | None = None
+    children: list[Node] | None = field(default=None, converter=optional_list_converter)
     """The ~~indices of this~~ node's children."""
     # fmt: off
     matrix: tuple[
@@ -562,7 +566,7 @@ class Node(GltfChildOfRootProperty):
 
 @define
 class Scene(GltfChildOfRootProperty):
-    nodes: list[Node] = field(factory=list)
+    nodes: list[Node] = field(factory=list, converter=list_converter)
 
 
 # ################################################################################

@@ -94,6 +94,12 @@ def test_set_scenes():
     }
 
 
+def test_scene_nodes_field_converter():
+    scene = Scene((Node(), Node()))  # init as tuple
+    assert isinstance(scene.nodes, list)
+    assert len(scene.nodes) == 2
+
+
 def test_load():
     data: dict[str, Any] = {
         "asset": {"version": "2.0", "generator": "glutenfreebakery"},

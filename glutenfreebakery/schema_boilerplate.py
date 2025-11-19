@@ -6,6 +6,14 @@ T = TypeVar("T")
 P = TypeVar("P")
 
 
+def list_converter(xs: Iterable[T]) -> list[T]:
+    return xs if isinstance(xs, list) else list(xs)
+
+
+def optional_list_converter(xs: Iterable[T] | None) -> list[T] | None:
+    return None if xs is None else list_converter(xs)
+
+
 class PartiallyImplicitList(Generic[T, P], Sequence[T]):
     def __init__(
         self,
@@ -59,7 +67,7 @@ class PartiallyImplicitList(Generic[T, P], Sequence[T]):
         raise IndexError(value)
 
     def remove(self, item: T):
-        self.explicit = [x for x in self.explicit if  id(x) != id(item)]
+        self.explicit = [x for x in self.explicit if id(x) != id(item)]
 
     def __iadd__(self, other: Iterable[T]):
         self.explicit += other
