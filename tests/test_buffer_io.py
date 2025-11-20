@@ -7,7 +7,11 @@ import numpy as np
 from numpy.typing import NDArray
 from pytest import mark, raises
 
-from glutenfreebakery.buffers import BufferBuilder, array_from_accessor
+from glutenfreebakery.buffers import (
+    BufferBuilder,
+    array_from_accessor,
+    get_bufferview_data,
+)
 from glutenfreebakery.gltf import Gltf2
 from glutenfreebakery.schema import (
     Accessor,
@@ -307,3 +311,13 @@ def gltfTutorial_005_BuffersBufferViewsAccessors():
         "asset": {"version": "2.0"},
     }
     return Gltf2.Load(data)
+
+
+def test_get_bufferview_data():
+    view = BufferView(DataBuffer(b"123456"), byteLength=3)
+    assert get_bufferview_data(view) == b"123"
+
+    view = BufferView(DataBuffer(b"123456"), byteLength=3, byteStride=2)
+    with raises(ValueError) as e:
+        get_bufferview_data(view)
+    assert "byteStride and no accessor" in str(e)
