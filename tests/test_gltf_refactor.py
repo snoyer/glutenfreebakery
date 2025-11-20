@@ -1,14 +1,18 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from pytest import mark
+
+from glutenfreebakery.buffers import get_bufferview_data
 from glutenfreebakery.gltf import Gltf2
 from glutenfreebakery.gltf_refactor import (
     embed_external_buffers,
     embed_external_images,
     extract_resources,
+    intervals_difference,
     merge_data_buffers,
 )
-from glutenfreebakery.schema import Buffer, BufferView, DataBuffer
+from glutenfreebakery.schema import Buffer, BufferView, DataBuffer, Image
 from glutenfreebakery.util import encode_data_uri
 
 
@@ -124,6 +128,31 @@ def test_extract_resources():
             assert (tmp / fn).is_file()
 
 
+def test_embed_then_extract_resources():
+    DIR = Path(__file__).parent / "data/small/"
+    gltf = Gltf2.Read(DIR / "two-textured-quads.gltf")
+    gltf.embed_resources()
+
+    buffer0 = gltf.buffers[0]
+    assert isinstance(buffer0, DataBuffer)
+    buffer0_len = len(buffer0.data)
+
+    with TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        gltf.extract_resources(tmp)
+
+        buffer_fns = ("two-textured-quads-buffer0.glbin",)
+        for buffer, fn in zip(gltf.buffers, buffer_fns, strict=True):
+            assert isinstance(buffer, Buffer) and buffer.uri == fn
+            assert (tmp / fn).is_file()
+            assert (tmp / fn).stat().st_size < buffer0_len
+
+        image_fns = "two-textured-quads-image0.png", "two-textured-quads-image1.png"
+        for image, fn in zip(gltf.images, image_fns, strict=True):
+            assert image.uri == fn
+            assert (tmp / fn).is_file()
+
+
 def test_extract_resources_check_data():
     DIR = Path(__file__).parent / "data/small/"
     gltf = Gltf2.Read(DIR / "two-textured-quads.gltf")
@@ -165,6 +194,31 @@ def test_extract_resources_check_data():
     }
 
 
+def test_extract_images_from_buffer():
+    buffer = DataBuffer(b"11112222aaaabbbb33334444ccccdddd55556666")
+    views = [
+        BufferView(buffer, byteOffset=0, byteLength=8),
+        BufferView(buffer, byteOffset=8, byteLength=8),  # img
+        BufferView(buffer, byteOffset=16, byteLength=8),
+        BufferView(buffer, byteOffset=24, byteLength=8),  # img
+        BufferView(buffer, byteOffset=32, byteLength=8),
+    ]
+    images = [
+        Image(mimeType="foo", bufferView=views[1]),
+        Image(mimeType="bar", bufferView=views[3]),
+    ]
+    gltf = Gltf2(bufferViews=views, images=images)
+
+    with TemporaryDirectory() as tmp:
+        tmp = Path(tmp)
+        extract_resources(gltf, tmp)
+        assert buffer.data == b"111122223333444455556666"
+        assert len(gltf.bufferViews) == 3
+        assert get_bufferview_data(gltf.bufferViews[0], relative_to=tmp) == b"11112222"
+        assert get_bufferview_data(gltf.bufferViews[1], relative_to=tmp) == b"33334444"
+        assert get_bufferview_data(gltf.bufferViews[2], relative_to=tmp) == b"55556666"
+
+
 def test_merge_all_data_buffers():
     data1 = bytes(i for i in range(20))
     data2 = bytes(i * 2 for i in range(30))
@@ -194,3 +248,20 @@ def test_merge_all_data_buffers():
     assert views[0].byteOffset == 0
     assert views[1].byteOffset == 20
     assert views[2].byteOffset == 50
+
+
+@mark.parametrize(
+    "a,b,c",
+    [
+        ([], [], []),
+        ([(5, 8), (9, 12)], [], [(5, 12)]),
+        ([(10, 20), (5, 12), (18, 25)], [], [(5, 25)]),
+        ([(10, 20)], [(5, 15)], [(15, 20)]),
+        ([(10, 20)], [(15, 25)], [(10, 15)]),
+        ([(5, 12)], [(5, 8), (9, 12)], []),
+    ],
+)
+def test_intervals_difference(
+    a: list[tuple[int, int]], b: list[tuple[int, int]], c: list[tuple[int, int]]
+):
+    assert list(intervals_difference(a, b)) == c
