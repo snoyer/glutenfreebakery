@@ -12,7 +12,7 @@ from glutenfreebakery.gltf_refactor import (
     intervals_difference,
     merge_data_buffers,
 )
-from glutenfreebakery.schema import Buffer, BufferView, DataBuffer, Image
+from glutenfreebakery.schema import BufferView, DataBuffer, Image, UriBuffer
 from glutenfreebakery.util import encode_data_uri
 
 
@@ -70,7 +70,7 @@ def test_embed_external_buffers():
 
     assert len(gltf.buffers) == 1
     buffer = gltf.buffers[0]
-    assert isinstance(buffer, Buffer) and buffer.uri.startswith("data:")
+    assert isinstance(buffer, UriBuffer) and buffer.uri.startswith("data:")
 
     embed_external_buffers(gltf, relative_to=DIR)
 
@@ -119,7 +119,7 @@ def test_extract_resources():
 
         buffer_fns = ("two-textured-quads-buffer0.glbin",)
         for buffer, fn in zip(gltf.buffers, buffer_fns, strict=True):
-            assert isinstance(buffer, Buffer) and buffer.uri == fn
+            assert isinstance(buffer, UriBuffer) and buffer.uri == fn
             assert (tmp / fn).is_file()
 
         image_fns = "two-textured-quads-image0.png", "two-textured-quads-image1.png"
@@ -143,7 +143,7 @@ def test_embed_then_extract_resources():
 
         buffer_fns = ("two-textured-quads-buffer0.glbin",)
         for buffer, fn in zip(gltf.buffers, buffer_fns, strict=True):
-            assert isinstance(buffer, Buffer) and buffer.uri == fn
+            assert isinstance(buffer, UriBuffer) and buffer.uri == fn
             assert (tmp / fn).is_file()
             assert (tmp / fn).stat().st_size < buffer0_len
 
@@ -226,9 +226,9 @@ def test_merge_all_data_buffers():
 
     gltf = Gltf2(
         bufferViews=[
-            BufferView(Buffer(0, ""), byteLength=0),
+            BufferView(UriBuffer(0, ""), byteLength=0),
             BufferView(DataBuffer(data1), byteLength=len(data1)),
-            BufferView(Buffer(0, ""), byteLength=0),
+            BufferView(UriBuffer(0, ""), byteLength=0),
             BufferView(DataBuffer(data2), byteLength=len(data2)),
             BufferView(DataBuffer(data3), byteLength=len(data3)),
         ]

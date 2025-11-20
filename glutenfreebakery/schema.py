@@ -178,7 +178,7 @@ class Asset(GltfProperty):
 
 
 @define
-class Buffer(GltfChildOfRootProperty):
+class UriBuffer(GltfChildOfRootProperty):
     """A buffer points to binary geometry, animation, or skins."""
 
     byteLength: int
@@ -195,6 +195,9 @@ class DataBuffer(GltfChildOfRootProperty):
     mimeType: str = "application/gltf-buffer"
 
 
+Buffer = UriBuffer | DataBuffer
+
+
 class Target(IntEnum):
     ARRAY_BUFFER = 34962
     ELEMENT_ARRAY_BUFFER = 34963
@@ -204,7 +207,7 @@ class Target(IntEnum):
 class BufferView(GltfChildOfRootProperty):
     """A view into a buffer generally representing a subset of the buffer."""
 
-    buffer: Buffer | DataBuffer
+    buffer: Buffer
     """The ~~index of the~~ buffer."""
     byteLength: int
     """The length of the bufferView in bytes."""
@@ -604,7 +607,7 @@ class BufferViews(GltfChildOfRootPropertyArray[BufferView]):
             yield image.bufferView
 
 
-class Buffers(GltfChildOfRootPropertyArray[Buffer | DataBuffer]):
+class Buffers(GltfChildOfRootPropertyArray[Buffer]):
     def _from_parent(self, parent: GltfRoot):
         for view in parent.bufferViews:
             yield view.buffer

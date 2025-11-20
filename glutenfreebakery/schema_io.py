@@ -56,6 +56,7 @@ from .schema import (
     SparseValues,
     Texture,
     TextureInfo,
+    UriBuffer,
     Wrap,
 )
 from .util import encode_data_uri
@@ -84,7 +85,7 @@ def read_glb(src: BinaryIO | Path | str, root: GltfRootT) -> GltfRootT:
                 empty_data_buffer = next(
                     buffer
                     for buffer in root.buffers
-                    if isinstance(buffer, Buffer) and buffer.uri == ""
+                    if isinstance(buffer, UriBuffer) and buffer.uri == ""
                 )
                 new_data_buffer = DataBuffer(chunk_data)
                 root.buffers.remove(empty_data_buffer)
@@ -155,7 +156,7 @@ def write_glb_chunks(
 
 
 PROP_LISTS = [
-    ("buffers", Buffer),
+    ("buffers", UriBuffer),
     ("bufferViews", BufferView),
     ("accessors", Accessor),
     ("images", Image),
@@ -399,7 +400,7 @@ class Writer:
         return cls.root_to_dict(gltf)
 
     @classmethod
-    def buffer_to_dict(cls, buffer: Buffer | DataBuffer) -> dict[str, Any]: ...
+    def buffer_to_dict(cls, buffer: Buffer) -> dict[str, Any]: ...
 
     @classmethod
     def root_to_dict(cls, root: GltfRoot):
@@ -448,7 +449,7 @@ class Writer:
                     if isinstance(o, prop_cls):
                         return getattr(parents[0], array_name, []).index(o)
 
-        if isinstance(o, Buffer | DataBuffer):
+        if isinstance(o, Buffer):
             return cls.buffer_to_dict(o)
 
         if isinstance(o, AnimationSampler):
@@ -475,7 +476,7 @@ class Writer:
 
 
 INDEXING = {
-    Buffer: "buffers",
+    UriBuffer: "buffers",
     DataBuffer: "buffers",
     BufferView: "bufferViews",
     Accessor: "accessors",
@@ -498,9 +499,9 @@ class GltfWriter(Writer):
         json.dump(cls.to_json_dict(gltf), f, indent=indent)
 
     @classmethod
-    def buffer_to_dict(cls, buffer: Buffer | DataBuffer):
+    def buffer_to_dict(cls, buffer: Buffer):
         if isinstance(buffer, DataBuffer):
-            uri_buffer = Buffer(
+            uri_buffer = UriBuffer(
                 uri=encode_data_uri(
                     buffer.data, mime_type=buffer.mimeType or "application/gltf-buffer"
                 ),
@@ -532,9 +533,9 @@ class GlbWriter(Writer):
         write_glb_chunks(f, ((JSON_CHUNK_TYPE, json_data), (BIN_CHUNK_TYPE, bin_data)))
 
     @classmethod
-    def buffer_to_dict(cls, buffer: Buffer | DataBuffer):
+    def buffer_to_dict(cls, buffer: Buffer):
         if isinstance(buffer, DataBuffer):
-            uri_buffer = Buffer(
+            uri_buffer = UriBuffer(
                 uri="",
                 byteLength=len(buffer.data),
                 name=buffer.name,

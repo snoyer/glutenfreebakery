@@ -219,12 +219,14 @@ def array_from_accessor(accessor: Accessor, relative_to: Path | None = None):
 def get_bufferview_data(view: BufferView, relative_to: Path | None = None):
     buffer_data = get_buffer_data(view.buffer, relative_to=relative_to)
     if view.byteStride:
-        raise ValueError("cannot get raw data from buffer view with byteStride and no accessor")
+        raise ValueError(
+            "cannot get raw data from buffer view with byteStride and no accessor"
+        )
     else:
         return buffer_data[view.byteOffset : view.byteOffset + view.byteLength]
 
 
-def get_buffer_data(buffer: Buffer | DataBuffer, relative_to: Path | None = None):
+def get_buffer_data(buffer: Buffer, relative_to: Path | None = None):
     if isinstance(buffer, DataBuffer):
         return buffer.data
     else:

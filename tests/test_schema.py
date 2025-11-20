@@ -8,7 +8,6 @@ from glutenfreebakery.schema import (
     AccessorType,
     Animation,
     Attributes,
-    Buffer,
     BufferView,
     Camera,
     ComponentType,
@@ -25,6 +24,7 @@ from glutenfreebakery.schema import (
     Skin,
     Target,
     Texture,
+    UriBuffer,
 )
 
 
@@ -116,7 +116,7 @@ def test_load():
 @mark.parametrize(
     "buffer",
     [
-        Buffer(
+        UriBuffer(
             byteLength=168,
             uri="data:application/gltf-buffer;base64,"
             "AACAvwAAgD8AAIA/AACAPwAAgD8AAIA/AACAvwAAgL8AAIA/AACAPwAAgL8AAIA/AACAPwAAgL8AAIC/"
@@ -136,7 +136,7 @@ def test_load():
         ),
     ],
 )
-def test_trisrip_cube(buffer: Buffer):
+def test_trisrip_cube(buffer: UriBuffer):
     accessor = Accessor(
         componentType=ComponentType.FLOAT,
         count=14,
@@ -219,7 +219,7 @@ def test_prop_arrays():
 
 def check_GltfRoot_internals(root: GltfRoot):
     for name, cls in [
-        ("buffers", (Buffer, DataBuffer)),
+        ("buffers", (UriBuffer, DataBuffer)),
         ("bufferViews", BufferView),
         ("accessors", Accessor),
         ("images", Image),

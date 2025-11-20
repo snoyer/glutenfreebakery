@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterable
 
 from .buffers import get_buffer_data, get_bufferview_data
-from .schema import Buffer, BufferView, DataBuffer, GltfRoot
+from .schema import Buffer, BufferView, DataBuffer, GltfRoot, UriBuffer
 from .util import encode_data_uri, guess_extension, read_uri_data
 
 
@@ -72,8 +72,8 @@ def extract_resources(
                     view.byteOffset -= hi - lo
         buffer.data = data
 
-    def f(old_buffer: Buffer | DataBuffer):
-        if isinstance(old_buffer, Buffer):
+    def f(old_buffer: Buffer):
+        if isinstance(old_buffer, UriBuffer):
             data, mimetype = read_uri_data(old_buffer.uri, relative_to=relative_to)
         else:
             data = old_buffer.data
@@ -83,10 +83,10 @@ def extract_resources(
         new_uri = f"{base_name}buffer{i}{guess_extension(mimetype)}"
         write_file(out_dir / new_uri, data)
 
-        if isinstance(old_buffer, Buffer):
+        if isinstance(old_buffer, UriBuffer):
             old_buffer.uri = new_uri
         else:
-            return Buffer(
+            return UriBuffer(
                 byteLength=len(data),
                 uri=new_uri,
                 extensions=old_buffer.extensions,
@@ -112,8 +112,8 @@ def embed_external_images(gltf: GltfRoot, relative_to: Path | None = None):
 
 
 def embed_external_buffers(gltf: GltfRoot, relative_to: Path | None = None):
-    def f(old_buffer: Buffer | DataBuffer):
-        if isinstance(old_buffer, Buffer) and old_buffer.uri:
+    def f(old_buffer: Buffer):
+        if isinstance(old_buffer, UriBuffer) and old_buffer.uri:
             data, mime_type = read_uri_data(old_buffer.uri, relative_to=relative_to)
             return DataBuffer(
                 data,
@@ -126,10 +126,8 @@ def embed_external_buffers(gltf: GltfRoot, relative_to: Path | None = None):
     _replace_buffers(gltf, f)
 
 
-def _replace_buffers(
-    gltf: GltfRoot, f: Callable[[Buffer | DataBuffer], Buffer | DataBuffer | None]
-):
-    replacements_by_old_id: dict[int, Buffer | DataBuffer] = {
+def _replace_buffers(gltf: GltfRoot, f: Callable[[Buffer], Buffer | None]):
+    replacements_by_old_id: dict[int, Buffer] = {
         id(old_buffer): new_buffer
         for old_buffer in gltf.buffers
         if (new_buffer := f(old_buffer))
@@ -151,7 +149,7 @@ def merge_data_buffers(gltf: GltfRoot):
     data_buffers = [buffer for buffer in gltf.buffers if isinstance(buffer, DataBuffer)]
     if data_buffers:
         combined_buffer = DataBuffer(name="merged")
-        replacements_by_id: dict[int, tuple[Buffer | DataBuffer, int]] = {}
+        replacements_by_id: dict[int, tuple[Buffer, int]] = {}
         for buffer in data_buffers:
             offset = len(combined_buffer.data)
             combined_buffer.data += buffer.data
