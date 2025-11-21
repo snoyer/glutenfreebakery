@@ -13,7 +13,8 @@ def read_uri_data(uri: str, relative_to: Path | None = None):
 
     url = urllib.parse.urlparse(uri, "file")
     if url.scheme == "file":
-        url = urllib.parse.urlparse(str(Path(relative_to or ".") / url.path), "file")
+        fixed_path = Path(relative_to or ".") / url.path
+        url = urllib.parse.urlparse(str(fixed_path.absolute()), "file")
     url_to_read = url.geturl()
 
     logger.info("reading %s", url_to_read)
