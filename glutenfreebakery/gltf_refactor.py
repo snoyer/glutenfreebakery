@@ -13,6 +13,31 @@ def embed_external_images_as_data_uri(gltf: GltfRoot, relative_to: Path | None =
             image.uri = encode_data_uri(image_data, image.mimeType or mime_type)
 
 
+def trim_data_buffer(
+    gltf: GltfRoot,
+    buffer: DataBuffer,
+    ranges_to_remove: Iterable[tuple[int, int]],
+    ranges_to_keep: Iterable[tuple[int, int]] = (),
+):
+    views = [view for view in gltf.bufferViews if view.buffer is buffer]
+
+    ranges_in_use = set(
+        (view.byteOffset, view.byteOffset + view.byteLength) for view in views
+    )
+
+    final_ranges_to_remove = list(
+        intervals_difference(ranges_to_remove, set(ranges_to_keep) | ranges_in_use)
+    )
+
+    data = get_buffer_data(buffer)
+    for lo, hi in sorted(final_ranges_to_remove, reverse=True):
+        data = data[:lo] + data[hi:]
+        for view in views:
+            if view.byteOffset >= lo:
+                view.byteOffset -= hi - lo
+    buffer.data = data
+
+
 def extract_resources(
     gltf: GltfRoot,
     out_dir: Path,
@@ -51,26 +76,8 @@ def extract_resources(
         view for view in gltf.bufferViews.explicit if id(view) not in view_ids_to_remove
     ]
 
-    views_by_id: dict[int, list[BufferView]] = {}
-    for view in gltf.bufferViews:
-        views_by_id.setdefault(id(view.buffer), []).append(view)
-
     for buffer, ranges_to_remove in intervals_to_remove.values():
-        ranges_to_keep = [
-            (view.byteOffset, view.byteOffset + view.byteLength)
-            for view in views_by_id[id(buffer)]
-            if id(view) not in ranges_to_remove
-        ]
-        ranges_to_remove = list(
-            intervals_difference(ranges_to_remove.values(), ranges_to_keep)
-        )
-        data = get_buffer_data(buffer)
-        for lo, hi in sorted(ranges_to_remove, reverse=True):
-            data = data[:lo] + data[hi:]
-            for view in views_by_id[id(buffer)]:
-                if view.byteOffset >= lo:
-                    view.byteOffset -= hi - lo
-        buffer.data = data
+        trim_data_buffer(gltf, buffer, ranges_to_remove.values())
 
     def f(old_buffer: Buffer):
         if isinstance(old_buffer, UriBuffer):
@@ -193,7 +200,12 @@ def intervals_difference(xs: Iterable[tuple[int, int]], ys: Iterable[tuple[int, 
     def diff1(xs: Iterable[tuple[int, int]], y: tuple[int, int]):
         lo0, hi0 = y
         for lo, hi in xs:
-            if lo < lo0 or hi > hi0:
+            if lo <= lo0 <= hi and lo <= hi0 <= hi:
+                if lo0 > lo:
+                    yield lo, lo0
+                if hi > hi0:
+                    yield hi0, hi
+            elif lo < lo0 or hi > hi0:
                 if lo <= lo0 <= hi:
                     hi = lo0
                 if lo <= hi0 <= hi:
