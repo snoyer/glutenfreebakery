@@ -29,7 +29,7 @@ class Gltf2(GltfRoot):
         if isinstance(f, (BinaryIO, BufferedIOBase)) or (
             isinstance(f, (Path, str)) and str(f).endswith(".glb")
         ):
-            return read_glb(f, instance)
+            read_glb(f, instance)
         else:
             read_gltf(f, instance)
 
