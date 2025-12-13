@@ -63,7 +63,6 @@ def extract_resources(
             write_file(out_dir / new_uri, data)
 
             image.uri = new_uri
-            image.bufferView = None
             if isinstance(view.buffer, DataBuffer):
                 buffer = view.buffer
                 _, intervals = intervals_to_remove.setdefault(id(buffer), (buffer, {}))
@@ -72,9 +71,7 @@ def extract_resources(
     view_ids_to_remove = set(
         id for _k, v in intervals_to_remove.values() for id in v.keys()
     )
-    gltf.bufferViews.explicit = [
-        view for view in gltf.bufferViews.explicit if id(view) not in view_ids_to_remove
-    ]
+    gltf.bufferViews.replace(lambda v: None if id(v) in view_ids_to_remove else v)
 
     for buffer, ranges_to_remove in intervals_to_remove.values():
         trim_data_buffer(gltf, buffer, ranges_to_remove.values())
@@ -140,22 +137,16 @@ def _replace_buffers(gltf: GltfRoot, f: Callable[[Buffer], Buffer | None]):
         if (new_buffer := f(old_buffer))
     }
 
-    for view in gltf.bufferViews:
-        try:
-            view.buffer = replacements_by_old_id[id(view.buffer)]
-        except KeyError:
-            pass
+    def g(buffer: Buffer):
+        return replacements_by_old_id.get(id(buffer), buffer)
 
-    gltf.buffers.explicit = [
-        replacements_by_old_id.get(id(old_buffer), old_buffer)
-        for old_buffer in gltf.buffers.explicit
-    ]
+    gltf.buffers.replace(g)
 
 
 def merge_data_buffers(gltf: GltfRoot):
     data_buffers = [buffer for buffer in gltf.buffers if isinstance(buffer, DataBuffer)]
     if data_buffers:
-        combined_buffer = DataBuffer(name="merged")
+        combined_buffer = DataBuffer()
         replacements_by_id: dict[int, tuple[Buffer, int]] = {}
         for buffer in data_buffers:
             offset = len(combined_buffer.data)
@@ -170,10 +161,8 @@ def merge_data_buffers(gltf: GltfRoot):
             except KeyError:
                 pass
 
-        gltf.buffers.explicit = [
-            combined_buffer,
-            *(b for b in gltf.buffers.explicit if id(b) not in replacements_by_id),
-        ]
+        gltf.buffers.replace(lambda b: None if b in data_buffers else b)
+        gltf.buffers.explicit.insert(0, combined_buffer)
 
 
 def intervals_union(xs: Iterable[tuple[int, int]]):

@@ -3,12 +3,13 @@ from __future__ import annotations
 import logging
 from enum import Enum, IntEnum
 from itertools import chain
-from typing import Any, Iterator, Literal, TypeVar
+from typing import Any, Callable, Iterator, Literal, TypeVar
 
 from attrs import Attribute, define, field, fields
 
 from .schema_boilerplate import (
     PartiallyImplicitList,
+    ReplaceMixin,
     list_converter,
     optional_list_converter,
 )
@@ -75,6 +76,13 @@ GltfChildOfRootPropertyT = TypeVar(
 
 class GltfChildOfRootPropertyArray(
     GltfPropertyArray[GltfChildOfRootPropertyT, "GltfRoot"]
+):
+    pass
+
+
+class GltfChildOfRootReplaceablePropertyArray(
+    GltfChildOfRootPropertyArray[GltfChildOfRootPropertyT],
+    ReplaceMixin[GltfChildOfRootPropertyT, "GltfRoot"],
 ):
     pass
 
@@ -193,6 +201,10 @@ class DataBuffer(GltfChildOfRootProperty):
 
     data: bytes = b""
     mimeType: str = "application/gltf-buffer"
+
+    @property
+    def byteLength(self):
+        return len(self.data)
 
 
 Buffer = UriBuffer | DataBuffer
@@ -599,18 +611,35 @@ class Accessors(GltfChildOfRootPropertyArray[Accessor]):
                 yield sampler.output
 
 
-class BufferViews(GltfChildOfRootPropertyArray[BufferView]):
+class BufferViews(GltfChildOfRootReplaceablePropertyArray[BufferView]):
     def _from_parent(self, parent: GltfRoot):
         for accessor in parent.accessors:
             yield accessor.bufferView
         for image in parent.images:
             yield image.bufferView
 
+    def _replace_implicits(self, f: Callable[[BufferView], BufferView | None]) -> None:
+        if self.parent:
+            for accessor in self.parent.accessors:
+                if accessor.bufferView:
+                    accessor.bufferView = f(accessor.bufferView)
+            for image in self.parent.images:
+                if image.bufferView:
+                    image.bufferView = f(image.bufferView)
 
-class Buffers(GltfChildOfRootPropertyArray[Buffer]):
+
+class Buffers(GltfChildOfRootReplaceablePropertyArray[Buffer]):
     def _from_parent(self, parent: GltfRoot):
         for view in parent.bufferViews:
             yield view.buffer
+
+    def _replace_implicits(self, f: Callable[[Buffer], Buffer | None]) -> None:
+        if self.parent:
+            for view in self.parent.bufferViews:
+                if (new_buffer := f(view.buffer)) is not None:
+                    view.buffer = new_buffer
+                else:
+                    raise ValueError("cannot replace None buffer")
 
 
 class Materials(GltfChildOfRootPropertyArray[Material]):

@@ -1,6 +1,6 @@
 import sys
 from itertools import chain, islice
-from typing import Generic, Iterable, Iterator, Sequence, TypeVar, overload
+from typing import Callable, Generic, Iterable, Iterator, Sequence, TypeVar, overload
 
 T = TypeVar("T")
 P = TypeVar("P")
@@ -66,9 +66,6 @@ class PartiallyImplicitList(Generic[T, P], Sequence[T]):
                 return i
         raise IndexError(value)
 
-    def remove(self, item: T):
-        self.explicit = [x for x in self.explicit if id(x) != id(item)]
-
     def __iadd__(self, other: Iterable[T]):
         self.explicit += other
         return self
@@ -86,6 +83,19 @@ class PartiallyImplicitList(Generic[T, P], Sequence[T]):
             return ", ".join(f"<{type(x).__name__} object at 0x{id(x):0x}>" for x in xs)
 
         return f"<{type(self).__name__}([{f(self.explicit)}]+[{f(self.implicit)}])>"
+
+
+class ReplaceMixin(PartiallyImplicitList[T, P]):
+
+    def replace(self, f: Callable[[T], T | None]):
+        self._replace_implicits(f)
+        self._replace_explicits(f)
+
+    def _replace_implicits(self, f: Callable[[T], T | None]) -> None:
+        raise NotImplementedError()  # pragma: nocover
+
+    def _replace_explicits(self, f: Callable[[T], T | None]):
+        self.explicit = [new for old in self.explicit if (new := f(old)) is not None]
 
 
 def unique_by_id(ts: Iterable[T]):

@@ -240,3 +240,40 @@ def check_GltfRoot_internals(root: GltfRoot):
     assert isinstance(root.scene, Scene) or root.scene is None
 
     return True
+
+
+def test_replace_buffers():
+    buffer1 = DataBuffer(b"1111")
+    buffer2 = DataBuffer(b"2222")
+    buffer3 = DataBuffer(b"3333")
+
+    view1 = BufferView(buffer1, buffer1.byteLength)
+    view2 = BufferView(buffer2, buffer2.byteLength)
+    view3a = BufferView(buffer3, buffer3.byteLength)
+    view3b = BufferView(buffer3, buffer3.byteLength)
+
+    gltf = Gltf2(bufferViews=[view1, view2, view3a, view3b])
+
+    buffer3_new = DataBuffer(b"xxxx")
+    gltf.buffers.replace(lambda b: buffer3_new if b is buffer3 else b)
+
+    assert buffer3_new in gltf.buffers
+    assert buffer3 not in gltf.buffers
+
+    assert view1.buffer is buffer1
+    assert view2.buffer is buffer2
+    assert view3a.buffer is buffer3_new
+    assert view3b.buffer is buffer3_new
+
+
+def test_replace_buffers_error():
+    buffer1 = DataBuffer(b"1111")
+
+    view1 = BufferView(buffer1, buffer1.byteLength)
+
+    gltf = Gltf2(bufferViews=[view1])
+
+    with raises(ValueError) as e:
+        gltf.buffers.replace(lambda b: None)
+
+    assert "cannot replace" in str(e)

@@ -82,16 +82,15 @@ def read_glb(src: BinaryIO | Path | str, root: GltfRootT) -> GltfRootT:
             load_gltf_dict(json.loads(chunk_data), root)
         elif chunk_type == BIN_CHUNK_TYPE:
             if chunk_data:
-                empty_data_buffer = next(
+                empty_uri_buffer = next(
                     buffer
                     for buffer in root.buffers
                     if isinstance(buffer, UriBuffer) and buffer.uri == ""
                 )
                 new_data_buffer = DataBuffer(chunk_data)
-                root.buffers.remove(empty_data_buffer)
-                for bufferView in root.bufferViews:
-                    if bufferView.buffer == empty_data_buffer:
-                        bufferView.buffer = new_data_buffer
+                root.buffers.replace(
+                    lambda b: new_data_buffer if b is empty_uri_buffer else b
+                )
         else:
             logger.warning("unknown chunk type %r", chunk_type)
 
