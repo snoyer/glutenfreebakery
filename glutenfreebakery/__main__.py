@@ -6,6 +6,7 @@ from typing import Sequence, cast
 
 from . import __name__ as module_name
 from .gltf import Gltf2
+from .schema_io import read_glb_chunks
 
 
 def main(argv: Sequence[str] | None = None):
@@ -13,10 +14,17 @@ def main(argv: Sequence[str] | None = None):
     subparsers = parser.add_subparsers(dest="command")
 
     parser_convert = subparsers.add_parser(
-        "convert", help="Convert a GlTF file between `.gltf` and `.glb` formats"
+        "convert", help="Convert a GlTF file between `.gltf` and `.glb` formats."
     )
     parser_convert.add_argument("input")
     parser_convert.add_argument("output")
+
+    parser_unpack = subparsers.add_parser(
+        "unpack",
+        help="Unpack a `.glb` file into a `.json` file and maybe a `.bin` file.",
+    )
+    parser_unpack.add_argument("input", metavar="in.glb")
+    parser_unpack.add_argument("output_json", metavar="out.json")
 
     fix_help_text(parser)
 
@@ -29,6 +37,9 @@ def main(argv: Sequence[str] | None = None):
 
     if args.command == "convert":
         convert(Path(args.input), Path(args.output))
+    elif args.command == "unpack":
+        output_json = Path(args.output_json)
+        unpack(Path(args.input), output_json)
 
 
 def convert(input: Path, output: Path) -> None:
@@ -40,6 +51,16 @@ def convert(input: Path, output: Path) -> None:
         gltf.extract_resources(output.parent, f"{output.stem}.")
 
     gltf.write(output)
+
+
+def unpack(input: Path, output_json: Path):
+    suffixes = {
+        b"JSON": ".json",
+        b"BIN\0": ".bin",
+    }
+    for chunk_type, chunk_data in read_glb_chunks(open(input, "rb")):
+        suffix = suffixes.get(chunk_type, f".{chunk_type.decode()}")
+        output_json.with_suffix(suffix).write_bytes(chunk_data)
 
 
 def fix_help_text(parser: ArgumentParser, usage_prefix: str = "usage: "):
