@@ -1,8 +1,9 @@
+from collections import defaultdict
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
 from .buffers import get_buffer_data, get_bufferview_data
-from .schema import Buffer, BufferView, DataBuffer, GltfRoot, UriBuffer
+from .schema import Buffer, BufferView, DataBuffer, GltfRoot, Image, UriBuffer
 from .util import encode_data_uri, guess_extension, read_uri_data
 
 
@@ -102,17 +103,21 @@ def extract_resources(
 
 
 def embed_external_images(gltf: GltfRoot, relative_to: Path | None = None):
+    images_by_uri: dict[tuple[str, str], list[Image]] = defaultdict(list)
     for image in gltf.images:
         if image.uri:
-            image_data, mime_type = read_uri_data(image.uri, relative_to=relative_to)
-            if image.mimeType:
-                mime_type = image.mimeType
-            image.bufferView = BufferView(
-                DataBuffer(image_data, name=image.uri, mimeType=mime_type),
-                byteLength=len(image_data),
-            )
+            images_by_uri[image.uri, image.mimeType].append(image)
+
+    for (uri, mime_type), images in images_by_uri.items():
+        image_data, guessed_mime_type = read_uri_data(uri, relative_to=relative_to)
+        buffer_view = BufferView(
+            DataBuffer(image_data, name=uri, mimeType=mime_type or guessed_mime_type),
+            byteLength=len(image_data),
+        )
+        for image in images:
+            image.bufferView = buffer_view
             image.uri = None
-            image.mimeType = mime_type
+            image.mimeType = guessed_mime_type
 
 
 def embed_external_buffers(gltf: GltfRoot, relative_to: Path | None = None):
