@@ -3,16 +3,11 @@ from __future__ import annotations
 import logging
 from enum import Enum, IntEnum
 from itertools import chain
-from typing import Any, Callable, Iterator, Literal, TypeVar
+from typing import Any, Callable, Iterable, Iterator, Literal, TypeVar
 
 from attrs import Attribute, define, field, fields
 
-from .schema_boilerplate import (
-    PartiallyImplicitList,
-    ReplaceMixin,
-    list_converter,
-    optional_list_converter,
-)
+from .schema_boilerplate import PartiallyImplicitList, ReplaceMixin
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +61,25 @@ def _fix_prop_array(
 
 
 class GltfPropertyArray(PropertyArray[GltfPropertyT, GltfPropertyT2]):
-    pass
+    def __init__(
+        self,
+        items: Iterable[GltfPropertyT] | GltfPropertyT | None = None,
+        *,
+        parent: GltfPropertyT2 | None = None,
+    ) -> None:
+        super().__init__(optional_prop_list_converter(items), parent=parent)
+
+
+def prop_list_converter(
+    items: Iterable[GltfPropertyT] | GltfPropertyT,
+) -> list[GltfPropertyT]:
+    return [items] if isinstance(items, GltfProperty) else list(items)
+
+
+def optional_prop_list_converter(
+    items: Iterable[GltfPropertyT] | GltfPropertyT | None,
+) -> list[GltfPropertyT] | None:
+    return None if items is None else prop_list_converter(items)
 
 
 GltfChildOfRootPropertyT = TypeVar(
@@ -420,7 +433,7 @@ class Primitive(GltfProperty):
 
 @define
 class Mesh(GltfChildOfRootProperty):
-    primitives: list[Primitive] = field(factory=list, converter=list_converter)
+    primitives: list[Primitive] = field(factory=list, converter=prop_list_converter)
     """An array of primitives, each defining geometry to be rendered."""
     weights: list[float] | None = None
     """Array of weights to be applied to the morph targets. The number of array elements **MUST** match the number of morph targets."""
@@ -542,7 +555,7 @@ class AnimationSamplerIterpolation(Enum):
 class Skin(GltfChildOfRootProperty):
     """Joints and matrices defining a skin."""
 
-    joints: list[Node] = field(converter=list_converter)
+    joints: list[Node] = field(converter=prop_list_converter)
     """~~Indices of~~ skeleton nodes, used as joints in this skin."""
     inverseBindMatrices: Accessor | None = None
     """The ~~index of the~~ accessor containing the floating-point 4x4 inverse-bind matrices. Its `accessor.count` property **MUST** be greater than or equal to the number of elements of the `joints` array. When undefined, each matrix is a 4x4 identity matrix."""
@@ -558,7 +571,9 @@ class Node(GltfChildOfRootProperty):
     """"The ~~index of the~~ skin referenced by this node. When a skin is referenced by a node within a scene, all joints used by the skin **MUST** belong to the same scene. When defined, `mesh` **MUST** also be defined."""
     mesh: Mesh | None = None
     """The ~~index of the~~ mesh in this node."""
-    children: list[Node] | None = field(default=None, converter=optional_list_converter)
+    children: list[Node] | None = field(
+        default=None, converter=optional_prop_list_converter
+    )
     """The ~~indices of this~~ node's children."""
     # fmt: off
     matrix: tuple[
@@ -581,7 +596,7 @@ class Node(GltfChildOfRootProperty):
 
 @define
 class Scene(GltfChildOfRootProperty):
-    nodes: list[Node] = field(factory=list, converter=list_converter)
+    nodes: list[Node] = field(factory=list, converter=prop_list_converter)
 
 
 # ################################################################################

@@ -6,14 +6,6 @@ T = TypeVar("T")
 P = TypeVar("P")
 
 
-def list_converter(xs: Iterable[T]) -> list[T]:
-    return xs if isinstance(xs, list) else list(xs)
-
-
-def optional_list_converter(xs: Iterable[T] | None) -> list[T] | None:
-    return None if xs is None else list_converter(xs)
-
-
 class PartiallyImplicitList(Generic[T, P], Sequence[T]):
     def __init__(
         self,
