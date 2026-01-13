@@ -76,9 +76,6 @@ class PartiallyImplicitList(Generic[T, P], Sequence[T]):
 
         return f"<{type(self).__name__}([{f(self.explicit)}]+[{f(self.implicit)}])>"
 
-
-class ReplaceMixin(PartiallyImplicitList[T, P]):
-
     def replace(self, f: Callable[[T], T | None]):
         self._replace_implicits(f)
         self._replace_explicits(f)

@@ -7,7 +7,7 @@ from typing import Any, Callable, Iterable, Iterator, Literal, TypeVar
 
 from attrs import Attribute, define, field, fields
 
-from .schema_boilerplate import PartiallyImplicitList, ReplaceMixin
+from .schema_boilerplate import PartiallyImplicitList
 
 logger = logging.getLogger(__name__)
 
@@ -89,13 +89,6 @@ GltfChildOfRootPropertyT = TypeVar(
 
 class GltfChildOfRootPropertyArray(
     GltfPropertyArray[GltfChildOfRootPropertyT, "GltfRoot"]
-):
-    pass
-
-
-class GltfChildOfRootReplaceablePropertyArray(
-    GltfChildOfRootPropertyArray[GltfChildOfRootPropertyT],
-    ReplaceMixin[GltfChildOfRootPropertyT, "GltfRoot"],
 ):
     pass
 
@@ -626,7 +619,7 @@ class Accessors(GltfChildOfRootPropertyArray[Accessor]):
                 yield sampler.output
 
 
-class BufferViews(GltfChildOfRootReplaceablePropertyArray[BufferView]):
+class BufferViews(GltfChildOfRootPropertyArray[BufferView]):
     def _from_parent(self, parent: GltfRoot):
         for accessor in parent.accessors:
             yield accessor.bufferView
@@ -643,7 +636,7 @@ class BufferViews(GltfChildOfRootReplaceablePropertyArray[BufferView]):
                     image.bufferView = f(image.bufferView)
 
 
-class Buffers(GltfChildOfRootReplaceablePropertyArray[Buffer]):
+class Buffers(GltfChildOfRootPropertyArray[Buffer]):
     def _from_parent(self, parent: GltfRoot):
         for view in parent.bufferViews:
             yield view.buffer
