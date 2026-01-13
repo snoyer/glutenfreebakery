@@ -173,7 +173,6 @@ PROP_LISTS = [
 
 
 def load_gltf_dict(data: Any, gltf: GltfRootT) -> GltfRootT:
-
     with ignore_key_error():
         gltf.asset = _load_class(Asset, data["asset"])
 
@@ -215,7 +214,6 @@ def ignore_key_error():
 
 
 def _fix_prop(o: GltfProperty, data: Any):
-
     if isinstance(o, BufferView):
         if isinstance(o.buffer, int):
             o.buffer = data["buffers"][o.buffer]
@@ -368,7 +366,6 @@ def _iter_fields_and_types(cls: Type[Any]):
 
 @lru_cache
 def _types_from_hint(hint: Any):
-
     def types() -> Iterator[Type[Any]]:
         if isinstance(hint, UnionType):
             yield from map(_arg_type, get_args(hint))
@@ -394,7 +391,6 @@ def to_gltf_dict(gltf: GltfRoot):
 
 
 class Writer:
-
     @classmethod
     def to_json_dict(cls, gltf: GltfRoot):
         return cls.root_to_dict(gltf)
@@ -518,7 +514,6 @@ class GltfWriter(Writer):
 class GlbWriter(Writer):
     @classmethod
     def write(cls, gltf: GltfRoot, f: BinaryIO):
-
         bin_data = b""
         if gltf.buffers:
             first_buffer, *other_buffers = gltf.buffers

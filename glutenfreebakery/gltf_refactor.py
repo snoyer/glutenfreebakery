@@ -190,7 +190,6 @@ def intervals_union(xs: Iterable[tuple[int, int]]):
 
 
 def intervals_difference(xs: Iterable[tuple[int, int]], ys: Iterable[tuple[int, int]]):
-
     def diff1(xs: Iterable[tuple[int, int]], y: tuple[int, int]):
         lo0, hi0 = y
         for lo, hi in xs:

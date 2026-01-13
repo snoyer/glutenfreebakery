@@ -74,7 +74,7 @@ def fix_help_text(parser: ArgumentParser, usage_prefix: str = "usage: "):
         for subparser in subparsers():
             yield subparser.format_usage().removeprefix(usage_prefix).rstrip()
 
-    parser.usage = f"\n{' '*len(usage_prefix)}".join(usages())
+    parser.usage = f"\n{' ' * len(usage_prefix)}".join(usages())
 
 
 if __name__ == "__main__":  # pragma: nocover
