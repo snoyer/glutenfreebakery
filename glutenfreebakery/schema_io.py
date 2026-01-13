@@ -23,7 +23,8 @@ from typing import (
     get_type_hints,
 )
 
-from attrs import Attribute, Factory, fields
+from attr._make import Factory
+from attrs import Attribute, fields
 
 from .schema import (
     Accessor,
@@ -442,7 +443,7 @@ class Writer:
             and isinstance(parents[0], GltfRoot)
         ):
             try:
-                return getattr(parents[0], INDEXING[type(o)], []).index(o)  # type: ignore
+                return getattr(parents[0], INDEXING[type(o)], []).index(o)
             except KeyError:
                 for prop_cls, array_name in INDEXING.items():
                     if isinstance(o, prop_cls):
@@ -474,7 +475,7 @@ class Writer:
         raise ValueError(o)
 
 
-INDEXING = {
+INDEXING: dict[Type[GltfProperty], str] = {
     UriBuffer: "buffers",
     DataBuffer: "buffers",
     BufferView: "bufferViews",
@@ -621,7 +622,7 @@ def _fields_and_defaults(cls: Type[Any]):
 def _iter_fields_and_defaults(cls: Type[Any]) -> Iterator[tuple[str, Any]]:
     for field in fields(cls):
         if isinstance(field, Attribute):
-            if isinstance(field.default, Factory):  # type: ignore
-                yield field.name, field.default.factory()  # type: ignore
+            if isinstance(field.default, Factory):
+                yield field.name, field.default.factory()
             else:
                 yield field.name, field.default

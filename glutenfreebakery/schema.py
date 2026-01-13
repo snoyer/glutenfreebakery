@@ -54,7 +54,8 @@ class PropertyArray(PartiallyImplicitList[T, GltfPropertyT]):
 def _fix_prop_array(
     instance: Any, attribute: Attribute[Any], value: Any
 ) -> PropertyArray[Any, Any]:
-    converted = attribute.converter(value)  # type: ignore
+    assert callable(attribute.converter)  # type: ignore
+    converted = attribute.converter(value)
     if isinstance(converted, PropertyArray):
         converted.parent = instance
     return converted
