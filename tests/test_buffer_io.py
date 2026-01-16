@@ -90,7 +90,7 @@ def test_add_array_errors():
     assert "could not guess accessor type" in str(e)
 
     with raises(ValueError) as e:
-        BufferBuilder().add_array(np.array([1j, 2, 3j, 4, 5j], np.complex64))  # type: ignore
+        BufferBuilder().add_array(np.array([1j, 2, 3j, 4, 5j], np.complex64))  # type: ignore[reportArgumentType]
     assert "could not guess component type" in str(e)
 
 
