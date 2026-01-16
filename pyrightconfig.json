@@ -1,0 +1,12 @@
+{
+  "failOnWarnings": false,
+  "typeCheckingMode": "strict",
+
+  "reportMissingTypeStubs": "hint",
+  "reportUnknownMemberType": "hint",
+  "reportMissingModuleSource": "hint",
+  "reportUnknownVariableType": "hint",
+  "reportUnnecessaryIsInstance": "information",
+  "reportNoOverloadImplementation": "error",
+  "reportImplicitOverride": "information"
+}
