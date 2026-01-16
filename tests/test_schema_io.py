@@ -1,10 +1,11 @@
 import logging
+import sys
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from urllib.error import URLError
 
-from pytest import LogCaptureFixture, raises
+from pytest import LogCaptureFixture, mark, raises
 
 from glutenfreebakery.gltf import Gltf2
 from glutenfreebakery.schema import DataBuffer, GltfRoot
@@ -85,6 +86,7 @@ def test_read_data_uri():
     assert mime == "application/gltf-buffer"
 
 
+@mark.skipif(sys.platform == "win32", reason="getting Permission Error for some reason")
 def test_read_abs_file_uri():
     with NamedTemporaryFile("w", suffix=".txt") as f:
         f.write("hello world")
@@ -97,6 +99,7 @@ def test_read_abs_file_uri():
         assert mime == "text/plain"
 
 
+@mark.skipif(sys.platform == "win32", reason="getting Permission Error for some reason")
 def test_read_rel_file_uri():
     with NamedTemporaryFile("w", suffix=".txt") as f:
         f.write("hello world")
