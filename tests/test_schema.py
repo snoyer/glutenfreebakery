@@ -100,6 +100,80 @@ def test_scene_nodes_field_converter():
     assert len(scene.nodes) == 2
 
 
+def test_Attributes_is_MutableMapping():
+    POSITION, NORMAL, TANGENT, TEXCOORD_0, TEXCOORD_1, COLOR_0, JOINTS_0, WEIGHTS_0 = (
+        Accessor(ComponentType.BYTE, 2, AccessorType.SCALAR) for _ in range(8)
+    )
+    attrs = Attributes(
+        POSITION=POSITION,
+        NORMAL=NORMAL,
+        TANGENT=TANGENT,
+        TEXCOORD_0=TEXCOORD_0,
+        TEXCOORD_1=TEXCOORD_1,
+        COLOR_0=COLOR_0,
+        JOINTS_0=JOINTS_0,
+        WEIGHTS_0=WEIGHTS_0,
+    )
+
+    assert attrs["POSITION"] is POSITION
+    assert attrs["NORMAL"] is NORMAL
+    assert attrs["TANGENT"] is TANGENT
+    assert attrs["TEXCOORD_0"] is TEXCOORD_0
+    assert attrs["TEXCOORD_1"] is TEXCOORD_1
+    assert attrs["COLOR_0"] is COLOR_0
+    assert attrs["JOINTS_0"] is JOINTS_0
+    assert attrs["WEIGHTS_0"] is WEIGHTS_0
+
+    del attrs["WEIGHTS_0"]
+    assert attrs.WEIGHTS_0 is None
+
+    attrs["TEXCOORD_1"] = attrs["TEXCOORD_0"]
+    assert attrs["TEXCOORD_1"] is attrs["TEXCOORD_0"]
+
+
+def test_Attributes_properties():
+    POSITION, NORMAL, TANGENT, TEXCOORD_0, TEXCOORD_1, COLOR_0, JOINTS_0, WEIGHTS_0 = (
+        Accessor(ComponentType.BYTE, 2, AccessorType.SCALAR) for _ in range(8)
+    )
+    attrs = Attributes()
+
+    attrs.POSITION = POSITION
+    attrs.NORMAL = NORMAL
+    attrs.TANGENT = TANGENT
+    attrs.TEXCOORD_0 = TEXCOORD_0
+    attrs.TEXCOORD_1 = TEXCOORD_1
+    attrs.COLOR_0 = COLOR_0
+    attrs.JOINTS_0 = JOINTS_0
+    attrs.WEIGHTS_0 = WEIGHTS_0
+
+    assert attrs.POSITION is POSITION
+    assert attrs.NORMAL is NORMAL
+    assert attrs.TANGENT is TANGENT
+    assert attrs.TEXCOORD_0 is TEXCOORD_0
+    assert attrs.TEXCOORD_1 is TEXCOORD_1
+    assert attrs.COLOR_0 is COLOR_0
+    assert attrs.JOINTS_0 is JOINTS_0
+    assert attrs.WEIGHTS_0 is WEIGHTS_0
+
+    attrs.POSITION = None
+    attrs.NORMAL = None
+    attrs.TANGENT = None
+    attrs.TEXCOORD_0 = None
+    attrs.TEXCOORD_1 = None
+    attrs.COLOR_0 = None
+    attrs.JOINTS_0 = None
+    attrs.WEIGHTS_0 = None
+
+    assert attrs.POSITION is None
+    assert attrs.NORMAL is None
+    assert attrs.TANGENT is None
+    assert attrs.TEXCOORD_0 is None
+    assert attrs.TEXCOORD_1 is None
+    assert attrs.COLOR_0 is None
+    assert attrs.JOINTS_0 is None
+    assert attrs.WEIGHTS_0 is None
+
+
 def test_load():
     data: dict[str, Any] = {
         "asset": {"version": "2.0", "generator": "glutenfreebakery"},

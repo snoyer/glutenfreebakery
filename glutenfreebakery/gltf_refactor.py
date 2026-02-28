@@ -150,7 +150,7 @@ def _replace_buffers(gltf: GltfRoot, f: Callable[[Buffer], Buffer | None]):
 
 def merge_data_buffers(gltf: GltfRoot):
     data_buffers = [buffer for buffer in gltf.buffers if isinstance(buffer, DataBuffer)]
-    if data_buffers:
+    if len(data_buffers) > 1:
         combined_buffer = DataBuffer()
         replacements_by_id: dict[int, tuple[Buffer, int]] = {}
         for buffer in data_buffers:

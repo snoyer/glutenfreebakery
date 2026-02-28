@@ -3,7 +3,17 @@ from __future__ import annotations
 import logging
 from enum import Enum, IntEnum
 from itertools import chain
-from typing import Any, Callable, Iterable, Iterator, Literal, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Iterable,
+    Iterator,
+    Literal,
+    Mapping,
+    MutableMapping,
+    TypeVar,
+    overload,
+)
 
 from attrs import Attribute, define, field, fields
 
@@ -238,9 +248,10 @@ class BufferView(GltfChildOfRootProperty):
     """The hint representing the intended GPU buffer type to use with this buffer view."""
 
 
-class Attributes(dict[str, Accessor]):
+class Attributes(MutableMapping[str, Accessor]):
     def __init__(
         self,
+        mapping: Mapping[str, Accessor] | None = None,
         *,
         POSITION: Accessor | None = None,
         COLOR_0: Accessor | None = None,
@@ -252,7 +263,7 @@ class Attributes(dict[str, Accessor]):
         WEIGHTS_0: Accessor | None = None,
         **kwargs: Accessor,
     ) -> None:
-        d = dict(
+        all_kwargs = dict(
             POSITION=POSITION,
             NORMAL=NORMAL,
             TANGENT=TANGENT,
@@ -263,9 +274,103 @@ class Attributes(dict[str, Accessor]):
             WEIGHTS_0=WEIGHTS_0,
             **kwargs,
         )
-        super().__init__(
-            **{k: v for k, v in d.items() if v is not None},
+        self._mapping = dict(
+            mapping or {}, **{k: v for k, v in all_kwargs.items() if v is not None}
         )
+
+    def __len__(self) -> int:
+        return len(self._mapping)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._mapping)
+
+    def __getitem__(self, key: str, /) -> Accessor:
+        return self._mapping[key]
+
+    def __setitem__(self, key: str, value: Accessor, /) -> None:
+        self._mapping[key] = value
+
+    def __delitem__(self, key: str, /) -> None:
+        del self._mapping[key]
+
+    @overload
+    def get(self, key: str, default: None = None, /) -> Accessor | None: ...
+    @overload
+    def get(self, key: str, default: Accessor, /) -> Accessor: ...
+    @overload
+    def get(self, key: str, default: T, /) -> Accessor | T: ...
+    def get(self, key: str, default: T | None = None, /) -> Accessor | T | None:
+        return self._mapping.get(key, default)
+
+    @property
+    def POSITION(self):
+        return self.get("POSITION")
+
+    @property
+    def NORMAL(self):
+        return self.get("NORMAL")
+
+    @property
+    def TANGENT(self):
+        return self.get("TANGENT")
+
+    @property
+    def TEXCOORD_0(self):
+        return self.get("TEXCOORD_0")
+
+    @property
+    def TEXCOORD_1(self):
+        return self.get("TEXCOORD_1")
+
+    @property
+    def COLOR_0(self):
+        return self.get("COLOR_0")
+
+    @property
+    def JOINTS_0(self):
+        return self.get("JOINTS_0")
+
+    @property
+    def WEIGHTS_0(self):
+        return self.get("WEIGHTS_0")
+
+    def _set_or_del(self, key: str, val: Accessor | None):
+        if val is None:
+            del self[key]
+        else:
+            self[key] = val
+
+    @POSITION.setter
+    def POSITION(self, accessor: Accessor | None):
+        self._set_or_del("POSITION", accessor)
+
+    @NORMAL.setter
+    def NORMAL(self, accessor: Accessor | None):
+        self._set_or_del("NORMAL", accessor)
+
+    @TANGENT.setter
+    def TANGENT(self, accessor: Accessor | None):
+        self._set_or_del("TANGENT", accessor)
+
+    @TEXCOORD_0.setter
+    def TEXCOORD_0(self, accessor: Accessor | None):
+        self._set_or_del("TEXCOORD_0", accessor)
+
+    @TEXCOORD_1.setter
+    def TEXCOORD_1(self, accessor: Accessor | None):
+        self._set_or_del("TEXCOORD_1", accessor)
+
+    @COLOR_0.setter
+    def COLOR_0(self, accessor: Accessor | None):
+        self._set_or_del("COLOR_0", accessor)
+
+    @JOINTS_0.setter
+    def JOINTS_0(self, accessor: Accessor | None):
+        self._set_or_del("JOINTS_0", accessor)
+
+    @WEIGHTS_0.setter
+    def WEIGHTS_0(self, accessor: Accessor | None):
+        self._set_or_del("WEIGHTS_0", accessor)
 
 
 class MagFilter(IntEnum):
@@ -409,7 +514,7 @@ class Mode(IntEnum):
 class Primitive(GltfProperty):
     """Geometry to be rendered with the given material."""
 
-    attributes: dict[str, Accessor]
+    attributes: Attributes = field(converter=Attributes, factory=Attributes)
     """A plain JSON object, where each key corresponds to a mesh attribute semantic and each value is the ~~index of the~~ accessor containing attribute's data."""
     indices: Accessor | None = None
     """The ~~index of the~~ accessor that contains the vertex indices.  When this is undefined, the primitive defines non-indexed geometry.  When defined, the accessor **MUST** have `SCALAR` type and an unsigned integer component type."""
