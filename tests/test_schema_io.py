@@ -3,7 +3,9 @@ import sys
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
+from threading import Thread
 from urllib.error import URLError
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from pytest import LogCaptureFixture, mark, raises
 
@@ -84,6 +86,28 @@ def test_read_data_uri():
     data, mime = read_uri_data("data:application/gltf-buffer;base64,AQID")
     assert data == bytes([1, 2, 3])
     assert mime == "application/gltf-buffer"
+
+
+def test_read_url_uri():
+    class HTTPRequestHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header("Content-type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"lorem ipsum")
+            self.wfile.close()
+
+    httpd = HTTPServer(("", 0), HTTPRequestHandler)
+    thread = Thread(target=httpd.serve_forever)
+    thread.start()
+
+    try:
+        data, mime = read_uri_data(f"http://localhost:{httpd.server_port}/lorem.txt")
+        assert data == b"lorem ipsum"
+        assert mime == "text/plain"
+    finally:
+        httpd.shutdown()
+        thread.join()
 
 
 @mark.skipif(sys.platform == "win32", reason="getting Permission Error for some reason")
