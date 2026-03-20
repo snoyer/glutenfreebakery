@@ -49,9 +49,8 @@ from .schema import (
     Image,
     Material,
     Mesh,
-    Mode,
+    MeshPrimitive,
     Node,
-    Primitive,
     Sampler,
     Scene,
     Skin,
@@ -299,7 +298,7 @@ def _load_class(cls: Type[GltfPropertyT], data: Any) -> GltfPropertyT:
         return _prop_from_dict(
             cls,
             data,
-            primitives=[_load_class(Primitive, v) for v in data.get("primitives", [])],
+            primitives=[_load_class(MeshPrimitive, v) for v in data.get("primitives", [])],
         )
     if issubclass(cls, Animation):
         samplers = [_load_class(AnimationSampler, v) for v in data["samplers"]]
@@ -567,7 +566,7 @@ def normalize_json_dict(data: dict[str, Any]):
 
     for meshes in data.get("meshes", []):
         for primitive in meshes.get("primitives", []):
-            pop_if(primitive, "mode", Mode.TRIANGLES)
+            pop_if(primitive, "mode", MeshPrimitive.Mode.TRIANGLES)
 
     for material in data.get("materials", []):
         pop_if(material, "doubleSided", False)
