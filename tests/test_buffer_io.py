@@ -15,13 +15,12 @@ from glutenfreebakery.buffers import (
 from glutenfreebakery.gltf import Gltf2
 from glutenfreebakery.schema import (
     Accessor,
-    Attributes,
     BufferView,
     DataBuffer,
     Mesh,
-    Mode,
+    MeshPrimitive,
+    MeshPrimitiveAttributes,
     Node,
-    Primitive,
     Scene,
 )
 
@@ -118,13 +117,13 @@ def test_trisrip_cube_buffer_builder():
                 Node(
                     mesh=Mesh(
                         primitives=[
-                            Primitive(
-                                Attributes(
+                            MeshPrimitive(
+                                MeshPrimitiveAttributes(
                                     POSITION=b.add_array(
                                         np.array(tristrip_cube, dtype=np.float32)
                                     )
                                 ),
-                                mode=Mode.TRIANGLE_STRIP,
+                                mode=MeshPrimitive.Mode.TRIANGLE_STRIP,
                             )
                         ]
                     ),

@@ -244,7 +244,7 @@ class BufferView(GltfChildOfRootProperty):
     """The hint representing the intended GPU buffer type to use with this buffer view."""
 
 
-class Attributes(MutableMapping[str, Accessor]):
+class MeshPrimitiveAttributes(MutableMapping[str, Accessor]):
     def __init__(
         self,
         mapping: Mapping[str, Accessor] | None = None,
@@ -448,15 +448,6 @@ class PbrMetallicRoughness(GltfProperty):
     """The metallic-roughness texture. The metalness values are sampled from the B channel. The roughness values are sampled from the G channel. These values **MUST** be encoded with a linear transfer function. If other channels are present (R or A), they **MUST** be ignored for metallic-roughness calculations. When undefined, the texture **MUST** be sampled as having `1.0` in G and B components."""
 
 
-class AlphaMode(Enum):
-    OPAQUE = "OPAQUE"
-    """The alpha value is ignored, and the rendered output is fully opaque."""
-    MASK = "MASK"
-    """The rendered output is either fully opaque or fully transparent depending on the alpha value and the specified `alphaCutoff` value; the exact appearance of the edges **MAY** be subject to implementation-specific techniques such as \"`Alpha-to-Coverage`\"."""
-    BLEND = "BLEND"
-    """The alpha value is used to composite the source and destination areas. The rendered output is combined with the background using the normal painting operation (i.e. the Porter and Duff over operator)."""
-
-
 @define
 class OcclusionTextureInfo(TextureInfo):
     """Material Occlusion Texture Info"""
@@ -475,6 +466,14 @@ class NormalTextureInfo(TextureInfo):
 
 @define
 class Material(GltfChildOfRootProperty):
+    class AlphaMode(Enum):
+        OPAQUE = "OPAQUE"
+        """The alpha value is ignored, and the rendered output is fully opaque."""
+        MASK = "MASK"
+        """The rendered output is either fully opaque or fully transparent depending on the alpha value and the specified `alphaCutoff` value; the exact appearance of the edges **MAY** be subject to implementation-specific techniques such as \"`Alpha-to-Coverage`\"."""
+        BLEND = "BLEND"
+        """The alpha value is used to composite the source and destination areas. The rendered output is combined with the background using the normal painting operation (i.e. the Porter and Duff over operator)."""
+
     pbrMetallicRoughness: PbrMetallicRoughness | None = None
     """A set of parameter values that are used to define the metallic-roughness material model from Physically Based Rendering (PBR) methodology. When undefined, all the default values of `pbrMetallicRoughness` **MUST** apply."""
     normalTexture: NormalTextureInfo | None = None
@@ -493,21 +492,22 @@ class Material(GltfChildOfRootProperty):
     """Specifies whether the material is double sided. When this value is false, back-face culling is enabled. When this value is true, back-face culling is disabled and double-sided lighting is enabled. The back-face **MUST** have its normals reversed before the lighting equation is evaluated."""
 
 
-class Mode(IntEnum):
-    POINTS = 0
-    LINES = 1
-    LINE_LOOP = 2
-    LINE_STRIP = 3
-    TRIANGLES = 4
-    TRIANGLE_STRIP = 5
-    TRIANGLE_FAN = 6
-
-
 @define
-class Primitive(GltfProperty):
+class MeshPrimitive(GltfProperty):
     """Geometry to be rendered with the given material."""
 
-    attributes: Attributes = field(converter=Attributes, factory=Attributes)
+    class Mode(IntEnum):
+        POINTS = 0
+        LINES = 1
+        LINE_LOOP = 2
+        LINE_STRIP = 3
+        TRIANGLES = 4
+        TRIANGLE_STRIP = 5
+        TRIANGLE_FAN = 6
+
+    attributes: MeshPrimitiveAttributes = field(
+        converter=MeshPrimitiveAttributes, factory=MeshPrimitiveAttributes
+    )
     """A plain JSON object, where each key corresponds to a mesh attribute semantic and each value is the ~~index of the~~ accessor containing attribute's data."""
     indices: Accessor | None = None
     """The ~~index of the~~ accessor that contains the vertex indices.  When this is undefined, the primitive defines non-indexed geometry.  When defined, the accessor **MUST** have `SCALAR` type and an unsigned integer component type."""
@@ -525,7 +525,7 @@ class Primitive(GltfProperty):
 
 @define
 class Mesh(GltfChildOfRootProperty):
-    primitives: list[Primitive] = field(factory=list, converter=prop_list_converter)
+    primitives: list[MeshPrimitive] = field(factory=list, converter=prop_list_converter)
     """An array of primitives, each defining geometry to be rendered."""
     weights: list[float] | None = None
     """Array of weights to be applied to the morph targets. The number of array elements **MUST** match the number of morph targets."""
@@ -535,7 +535,11 @@ class Mesh(GltfChildOfRootProperty):
 class Camera(GltfChildOfRootProperty):
     """A camera's projection.  A node **MAY** reference a camera to apply a transform to place the camera in the scene."""
 
-    type: CameraType
+    class Type(Enum):
+        PERSPECTIVE = "perspective"
+        ORTHOGRAPHIC = "orthographic"
+
+    type: Type
     """Specifies if the camera uses a perspective or orthographic projection.  Based on this, either the camera's `perspective` or `orthographic` property **MUST** be defined."""
     orthographic: CameraOrthographic | None = None
     """An orthographic camera containing properties to create an orthographic projection matrix. This property **MUST NOT** be defined when `perspective` is defined."""
@@ -569,11 +573,6 @@ class CameraPerspective(GltfProperty):
     """The floating-point distance to the far clipping plane. When defined, `zfar` **MUST** be greater than `znear`. If `zfar` is undefined, client implementations **SHOULD** use infinite projection matrix."""
     aspectRatio: float | None = None
     """The floating-point aspect ratio of the field of view. When undefined, the aspect ratio of the rendering viewport **MUST** be used."""
-
-
-class CameraType(Enum):
-    PERSPECTIVE = "perspective"
-    ORTHOGRAPHIC = "orthographic"
 
 
 class AnimationChannels(GltfPropertyArray["AnimationChannel", "Animation"]):
@@ -626,21 +625,20 @@ class AnimationChannelTarget(GltfProperty):
 class AnimationSampler(GltfProperty):
     """An animation sampler combines timestamps with a sequence of output values and defines an interpolation algorithm."""
 
+    class Interpolation(Enum):
+        LINEAR = "LINEAR"
+        """The animated values are linearly interpolated between keyframes. When targeting a rotation, spherical linear interpolation (slerp) **SHOULD** be used to interpolate quaternions. The number of output elements **MUST** equal the number of input elements."""
+        STEP = "STEP"
+        """The animated values remain constant to the output of the first keyframe, until the next keyframe. The number of output elements **MUST** equal the number of input elements."""
+        CUBICSPLINE = "CUBICSPLINE"
+        """The animation's interpolation is computed using a cubic spline with specified tangents. The number of output elements **MUST** equal three times the number of input elements. For each input element, the output stores three elements, an in-tangent, a spline vertex, and an out-tangent. There **MUST** be at least two keyframes when using this interpolation."""
+
     input: Accessor
     """The ~~index of an~~ accessor containing keyframe timestamps. The accessor **MUST** be of scalar type with floating-point components. The values represent time in seconds with `time[0] >= 0.0`, and strictly increasing values, i.e., `time[n + 1] > time[n]`."""
     output: Accessor
     """The ~~index of an~~ accessor, containing keyframe output values."""
-    interpolation: AnimationSamplerIterpolation | None = None
+    interpolation: Interpolation | None = None
     """Interpolation algorithm."""
-
-
-class AnimationSamplerIterpolation(Enum):
-    LINEAR = "LINEAR"
-    """The animated values are linearly interpolated between keyframes. When targeting a rotation, spherical linear interpolation (slerp) **SHOULD** be used to interpolate quaternions. The number of output elements **MUST** equal the number of input elements."""
-    STEP = "STEP"
-    """The animated values remain constant to the output of the first keyframe, until the next keyframe. The number of output elements **MUST** equal the number of input elements."""
-    CUBICSPLINE = "CUBICSPLINE"
-    """The animation's interpolation is computed using a cubic spline with specified tangents. The number of output elements **MUST** equal three times the number of input elements. For each input element, the output stores three elements, an in-tangent, a spline vertex, and an out-tangent. There **MUST** be at least two keyframes when using this interpolation."""
 
 
 @define

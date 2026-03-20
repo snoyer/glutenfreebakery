@@ -6,7 +6,6 @@ from glutenfreebakery import Gltf2
 from glutenfreebakery.schema import (
     Accessor,
     Animation,
-    Attributes,
     BufferView,
     Camera,
     DataBuffer,
@@ -14,9 +13,9 @@ from glutenfreebakery.schema import (
     Image,
     Material,
     Mesh,
-    Mode,
+    MeshPrimitive,
+    MeshPrimitiveAttributes,
     Node,
-    Primitive,
     Sampler,
     Scene,
     Skin,
@@ -101,7 +100,7 @@ def test_Attributes_is_MutableMapping():
     POSITION, NORMAL, TANGENT, TEXCOORD_0, TEXCOORD_1, COLOR_0, JOINTS_0, WEIGHTS_0 = (
         Accessor(Accessor.ComponentType.BYTE, 2, Accessor.Type.SCALAR) for _ in range(8)
     )
-    attrs = Attributes(
+    attrs = MeshPrimitiveAttributes(
         POSITION=POSITION,
         NORMAL=NORMAL,
         TANGENT=TANGENT,
@@ -132,7 +131,7 @@ def test_Attributes_properties():
     POSITION, NORMAL, TANGENT, TEXCOORD_0, TEXCOORD_1, COLOR_0, JOINTS_0, WEIGHTS_0 = (
         Accessor(Accessor.ComponentType.BYTE, 2, Accessor.Type.SCALAR) for _ in range(8)
     )
-    attrs = Attributes()
+    attrs = MeshPrimitiveAttributes()
 
     attrs.POSITION = POSITION
     attrs.NORMAL = NORMAL
@@ -224,8 +223,9 @@ def test_trisrip_cube(buffer: UriBuffer):
                 Node(
                     mesh=Mesh(
                         primitives=[
-                            Primitive(
-                                Attributes(POSITION=accessor), mode=Mode.TRIANGLE_STRIP
+                            MeshPrimitive(
+                                MeshPrimitiveAttributes(POSITION=accessor),
+                                mode=MeshPrimitive.Mode.TRIANGLE_STRIP,
                             )
                         ]
                     ),
