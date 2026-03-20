@@ -5,16 +5,7 @@ from typing import Any
 import numpy as np
 from numpy.typing import NDArray
 
-from .schema import (
-    Accessor,
-    AccessorType,
-    Buffer,
-    BufferView,
-    ComponentType,
-    DataBuffer,
-    IndicesComponentType,
-    Target,
-)
+from .schema import Accessor, AccessorSparseIndices, Buffer, BufferView, DataBuffer
 from .util import read_uri_data
 
 logger = logging.getLogger(__name__)
@@ -31,38 +22,38 @@ NP_TYPES = (
 )
 
 COMPONENT_TYPE_TO_DTYPE = {
-    ComponentType.BYTE: np.byte,
-    ComponentType.UNSIGNED_BYTE: np.ubyte,
-    ComponentType.SHORT: np.short,
-    ComponentType.UNSIGNED_SHORT: np.ushort,
-    ComponentType.UNSIGNED_INT: np.uint32,
-    ComponentType.FLOAT: np.float32,
+    Accessor.ComponentType.BYTE: np.byte,
+    Accessor.ComponentType.UNSIGNED_BYTE: np.ubyte,
+    Accessor.ComponentType.SHORT: np.short,
+    Accessor.ComponentType.UNSIGNED_SHORT: np.ushort,
+    Accessor.ComponentType.UNSIGNED_INT: np.uint32,
+    Accessor.ComponentType.FLOAT: np.float32,
 }
 
 INDICES_COMPONENT_TYPE_TO_DTYPE = {
-    IndicesComponentType.UNSIGNED_BYTE: np.ubyte,
-    IndicesComponentType.UNSIGNED_INT: np.uint32,
-    IndicesComponentType.UNSIGNED_SHORT: np.ushort,
+    AccessorSparseIndices.ComponentType.UNSIGNED_BYTE: np.ubyte,
+    AccessorSparseIndices.ComponentType.UNSIGNED_INT: np.uint32,
+    AccessorSparseIndices.ComponentType.UNSIGNED_SHORT: np.ushort,
 }
 
 DTYPELIKE_TO_COMPONENT_TYPE = {
-    np.byte: ComponentType.BYTE,
-    np.ubyte: ComponentType.UNSIGNED_BYTE,
-    np.short: ComponentType.SHORT,
-    np.ushort: ComponentType.UNSIGNED_SHORT,
-    np.floating: ComponentType.FLOAT,
-    np.unsignedinteger: ComponentType.UNSIGNED_INT,
-    np.integer: ComponentType.UNSIGNED_INT,
+    np.byte: Accessor.ComponentType.BYTE,
+    np.ubyte: Accessor.ComponentType.UNSIGNED_BYTE,
+    np.short: Accessor.ComponentType.SHORT,
+    np.ushort: Accessor.ComponentType.UNSIGNED_SHORT,
+    np.floating: Accessor.ComponentType.FLOAT,
+    np.unsignedinteger: Accessor.ComponentType.UNSIGNED_INT,
+    np.integer: Accessor.ComponentType.UNSIGNED_INT,
 }
 
-SHAPE_TO_ACCESSOR_TYPE: dict[tuple[int, ...], AccessorType] = {
-    (): AccessorType.SCALAR,
-    (2,): AccessorType.VEC2,
-    (3,): AccessorType.VEC3,
-    (4,): AccessorType.VEC4,
-    (2, 2): AccessorType.MAT2,
-    (3, 3): AccessorType.MAT3,
-    (4, 4): AccessorType.MAT4,
+SHAPE_TO_ACCESSOR_TYPE: dict[tuple[int, ...], Accessor.Type] = {
+    (): Accessor.Type.SCALAR,
+    (2,): Accessor.Type.VEC2,
+    (3,): Accessor.Type.VEC3,
+    (4,): Accessor.Type.VEC4,
+    (2, 2): Accessor.Type.MAT2,
+    (3, 3): Accessor.Type.MAT3,
+    (4, 4): Accessor.Type.MAT4,
 }
 ACCESSOR_TYPE_TO_SHAPE = {v: k for k, v in SHAPE_TO_ACCESSOR_TYPE.items()}
 
@@ -74,9 +65,9 @@ class BufferBuilder:
     def add_array(
         self,
         array: NDArray[NP_TYPES],
-        accessorType: AccessorType | None = None,
-        componentType: ComponentType | None = None,
-        target: Target | None = Target.ARRAY_BUFFER,
+        accessorType: Accessor.Type | None = None,
+        componentType: Accessor.ComponentType | None = None,
+        target: BufferView.Target | None = BufferView.Target.ARRAY_BUFFER,
     ):
         return self.add(array, accessorType, componentType, target=target)
 
@@ -84,22 +75,26 @@ class BufferBuilder:
         self,
         array: NDArray[NP_TYPES],
     ):
-        return self.add_element_array(array.flatten(), accessorType=AccessorType.SCALAR)
+        return self.add_element_array(
+            array.flatten(), accessorType=Accessor.Type.SCALAR
+        )
 
     def add_element_array(
         self,
         array: NDArray[NP_TYPES],
-        accessorType: AccessorType | None = None,
-        componentType: ComponentType | None = None,
+        accessorType: Accessor.Type | None = None,
+        componentType: Accessor.ComponentType | None = None,
     ):
-        return self.add(array, accessorType, componentType, Target.ELEMENT_ARRAY_BUFFER)
+        return self.add(
+            array, accessorType, componentType, BufferView.Target.ELEMENT_ARRAY_BUFFER
+        )
 
     def add(
         self,
         array: NDArray[NP_TYPES],
-        accessorType: AccessorType | None = None,
-        componentType: ComponentType | None = None,
-        target: Target | None = None,
+        accessorType: Accessor.Type | None = None,
+        componentType: Accessor.ComponentType | None = None,
+        target: BufferView.Target | None = None,
     ):
         if componentType is None:
             componentType = guess_component_type(array)

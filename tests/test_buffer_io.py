@@ -15,39 +15,36 @@ from glutenfreebakery.buffers import (
 from glutenfreebakery.gltf import Gltf2
 from glutenfreebakery.schema import (
     Accessor,
-    AccessorType,
     Attributes,
     BufferView,
-    ComponentType,
     DataBuffer,
     Mesh,
     Mode,
     Node,
     Primitive,
     Scene,
-    Target,
 )
 
 
 def sample_arrays():
     for dtype, expected_component_type in [
-        (np.byte, ComponentType.BYTE),
-        (np.ubyte, ComponentType.UNSIGNED_BYTE),
-        (np.short, ComponentType.SHORT),
-        (np.ushort, ComponentType.UNSIGNED_SHORT),
-        (np.uint32, ComponentType.UNSIGNED_INT),
-        (np.uint64, ComponentType.UNSIGNED_INT),
-        (np.float32, ComponentType.FLOAT),
-        (np.float64, ComponentType.FLOAT),
+        (np.byte, Accessor.ComponentType.BYTE),
+        (np.ubyte, Accessor.ComponentType.UNSIGNED_BYTE),
+        (np.short, Accessor.ComponentType.SHORT),
+        (np.ushort, Accessor.ComponentType.UNSIGNED_SHORT),
+        (np.uint32, Accessor.ComponentType.UNSIGNED_INT),
+        (np.uint64, Accessor.ComponentType.UNSIGNED_INT),
+        (np.float32, Accessor.ComponentType.FLOAT),
+        (np.float64, Accessor.ComponentType.FLOAT),
     ]:
         for shape, expected_type in [
-            ((8,), AccessorType.SCALAR),
-            ((8, 2), AccessorType.VEC2),
-            ((8, 3), AccessorType.VEC3),
-            ((8, 4), AccessorType.VEC4),
-            ((8, 2, 2), AccessorType.MAT2),
-            ((8, 3, 3), AccessorType.MAT3),
-            ((8, 4, 4), AccessorType.MAT4),
+            ((8,), Accessor.Type.SCALAR),
+            ((8, 2), Accessor.Type.VEC2),
+            ((8, 3), Accessor.Type.VEC3),
+            ((8, 4), Accessor.Type.VEC4),
+            ((8, 2, 2), Accessor.Type.MAT2),
+            ((8, 3, 3), Accessor.Type.MAT3),
+            ((8, 4, 4), Accessor.Type.MAT4),
         ]:
             array = np.array(list(range(reduce(operator.mul, shape))), dtype).reshape(
                 shape
@@ -61,8 +58,8 @@ def sample_arrays():
 @mark.parametrize("array, expected_type, expected_component_type", sample_arrays())
 def test_add_array(
     array: NDArray[Any],
-    expected_type: AccessorType,
-    expected_component_type: ComponentType,
+    expected_type: Accessor.Type,
+    expected_component_type: Accessor.ComponentType,
 ):
     builder = BufferBuilder()
     accessor = builder.add_array(array)
@@ -74,14 +71,16 @@ def test_add_array(
 
 def test_add_indices_array():
     a = BufferBuilder().add_indices_array(np.array([1, 2, 3]))
-    assert a.type == AccessorType.SCALAR
-    assert a.componentType == ComponentType.UNSIGNED_INT
+    assert a.type == Accessor.Type.SCALAR
+    assert a.componentType == Accessor.ComponentType.UNSIGNED_INT
 
 
 def test_add_element_array():
     a = BufferBuilder().add_element_array(np.array([1, 2, 3]))
-    assert a.bufferView and a.bufferView.target == Target.ELEMENT_ARRAY_BUFFER
-    assert a.componentType == ComponentType.UNSIGNED_INT
+    assert (
+        a.bufferView and a.bufferView.target == BufferView.Target.ELEMENT_ARRAY_BUFFER
+    )
+    assert a.componentType == Accessor.ComponentType.UNSIGNED_INT
 
 
 def test_add_array_errors():
@@ -176,23 +175,23 @@ def test_interleaving():
         byteStride=3 * 4 + 2 * 4 + 1,
     )
     accessor1 = Accessor(
-        componentType=ComponentType.FLOAT,
+        componentType=Accessor.ComponentType.FLOAT,
         count=2,
-        type=AccessorType.VEC3,
+        type=Accessor.Type.VEC3,
         bufferView=bufferView,
         byteOffset=0,
     )
     accessor2 = Accessor(
-        componentType=ComponentType.FLOAT,
+        componentType=Accessor.ComponentType.FLOAT,
         count=2,
-        type=AccessorType.VEC2,
+        type=Accessor.Type.VEC2,
         bufferView=bufferView,
         byteOffset=3 * 4,
     )
     accessor3 = Accessor(
-        componentType=ComponentType.BYTE,
+        componentType=Accessor.ComponentType.BYTE,
         count=2,
-        type=AccessorType.SCALAR,
+        type=Accessor.Type.SCALAR,
         bufferView=bufferView,
         byteOffset=3 * 4 + 2 * 4,
     )

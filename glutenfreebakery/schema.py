@@ -104,34 +104,32 @@ class GltfChildOfRootPropertyArray(
     pass
 
 
-class ComponentType(IntEnum):
-    BYTE = 5120
-    UNSIGNED_BYTE = 5121
-    SHORT = 5122
-    UNSIGNED_SHORT = 5123
-    UNSIGNED_INT = 5125
-    FLOAT = 5126
-
-
-class AccessorType(Enum):
-    SCALAR = "SCALAR"
-    VEC2 = "VEC2"
-    VEC3 = "VEC3"
-    VEC4 = "VEC4"
-    MAT2 = "MAT2"
-    MAT3 = "MAT3"
-    MAT4 = "MAT4"
-
-
 @define
 class Accessor(GltfChildOfRootProperty):
     """A typed view into a buffer view that contains raw binary data."""
+
+    class ComponentType(IntEnum):
+        BYTE = 5120
+        UNSIGNED_BYTE = 5121
+        SHORT = 5122
+        UNSIGNED_SHORT = 5123
+        UNSIGNED_INT = 5125
+        FLOAT = 5126
+
+    class Type(Enum):
+        SCALAR = "SCALAR"
+        VEC2 = "VEC2"
+        VEC3 = "VEC3"
+        VEC4 = "VEC4"
+        MAT2 = "MAT2"
+        MAT3 = "MAT3"
+        MAT4 = "MAT4"
 
     componentType: ComponentType
     """The datatype of the accessor's components.  UNSIGNED_INT type **MUST NOT** be used for any accessor that is not referenced by `mesh.primitive.indices`."""
     count: int
     """The number of elements referenced by this accessor, not to be confused with the number of bytes or number of components."""
-    type: AccessorType
+    type: Type
     """Specifies if the accessor's elements are scalars, vectors, or matrices."""
     bufferView: BufferView | None = None
     """The ~~index of the~~ buffer view. When undefined, the accessor **MUST** be initialized with zeros; `sparse` property or extensions **MAY** override zeros with actual values."""
@@ -143,42 +141,41 @@ class Accessor(GltfChildOfRootProperty):
     """Minimum value of each component in this accessor.  Array elements **MUST** be treated as having the same data type as accessor's `componentType`. Both `min` and `max` arrays have the same length.  The length is determined by the value of the `type` property; it can be 1, 2, 3, 4, 9, or 16.\n\n`normalized` property has no effect on array values: they always correspond to the actual values stored in the buffer. When the accessor is sparse, this property **MUST** contain minimum values of accessor data with sparse substitution applied."""
     max: list[float] | None = None
     """Maximum value of each component in this accessor.  Array elements **MUST** be treated as having the same data type as accessor's `componentType`. Both `min` and `max` arrays have the same length.  The length is determined by the value of the `type` property; it can be 1, 2, 3, 4, 9, or 16.\n\n`normalized` property has no effect on array values: they always correspond to the actual values stored in the buffer. When the accessor is sparse, this property **MUST** contain maximum values of accessor data with sparse substitution applied."""
-    sparse: Sparse | None = None
+    sparse: AccessorSparse | None = None
     """Sparse storage of elements that deviate from their initialization value."""
 
 
 @define
-class Sparse(GltfProperty):
+class AccessorSparse(GltfProperty):
     """Sparse storage of accessor values that deviate from their initialization value."""
 
     count: int
     """Number of deviating accessor values stored in the sparse array."""
-    indices: SparseIndices
+    indices: AccessorSparseIndices
     """An object pointing to a buffer view containing the indices of deviating accessor values. The number of indices is equal to `count`. Indices **MUST** strictly increase."""
-    values: SparseValues
+    values: AccessorSparseValues
     """An object pointing to a buffer view containing the deviating accessor values."""
 
 
-class IndicesComponentType(IntEnum):
-    UNSIGNED_BYTE = 5121
-    UNSIGNED_SHORT = 5123
-    UNSIGNED_INT = 5125
-
-
 @define
-class SparseIndices(GltfProperty):
+class AccessorSparseIndices(GltfProperty):
+    class ComponentType(IntEnum):
+        UNSIGNED_BYTE = 5121
+        UNSIGNED_SHORT = 5123
+        UNSIGNED_INT = 5125
+
     """An object pointing to a buffer view containing the indices of deviating accessor values. The number of indices is equal to `accessor.sparse.count`. Indices **MUST** strictly increase."""
 
     bufferView: BufferView
     """The ~~index of the~~ buffer view with sparse indices. The referenced buffer view **MUST NOT** have its `target` or `byteStride` properties defined. The buffer view and the optional `byteOffset` **MUST** be aligned to the `componentType` byte length."""
-    componentType: IndicesComponentType
+    componentType: ComponentType
     """The indices data type."""
     byteOffset: int = 0
     """The offset relative to the start of the bufferView in bytes."""
 
 
 @define
-class SparseValues(GltfProperty):
+class AccessorSparseValues(GltfProperty):
     """An object pointing to a buffer view containing the deviating accessor values. The number of elements is equal to `accessor.sparse.count` times number of components. The elements have the same component type as the base accessor. The elements are tightly packed. Data **MUST** be aligned following the same rules as the base accessor."""
 
     bufferView: BufferView
@@ -227,14 +224,13 @@ class DataBuffer(GltfChildOfRootProperty):
 Buffer = UriBuffer | DataBuffer
 
 
-class Target(IntEnum):
-    ARRAY_BUFFER = 34962
-    ELEMENT_ARRAY_BUFFER = 34963
-
-
 @define
 class BufferView(GltfChildOfRootProperty):
     """A view into a buffer generally representing a subset of the buffer."""
+
+    class Target(IntEnum):
+        ARRAY_BUFFER = 34962
+        ELEMENT_ARRAY_BUFFER = 34963
 
     buffer: Buffer
     """The ~~index of the~~ buffer."""
@@ -373,29 +369,26 @@ class Attributes(MutableMapping[str, Accessor]):
         self._set_or_del("WEIGHTS_0", accessor)
 
 
-class MagFilter(IntEnum):
-    NEAREST = 9728
-    LINEAR = 9729
-
-
-class MinFilter(IntEnum):
-    NEAREST = 9728
-    LINEAR = 9729
-    NEAREST_MIPMAP_NEAREST = 9984
-    LINEAR_MIPMAP_NEAREST = 9985
-    NEAREST_MIPMAP_LINEAR = 9986
-    LINEAR_MIPMAP_LINEAR = 9987
-
-
-class Wrap(IntEnum):
-    CLAMP_TO_EDGE = 33071
-    MIRRORED_REPEAT = 33648
-    REPEAT = 10497
-
-
 @define
 class Sampler(GltfChildOfRootProperty):
     """Texture sampler properties for filtering and wrapping modes."""
+
+    class MagFilter(IntEnum):
+        NEAREST = 9728
+        LINEAR = 9729
+
+    class MinFilter(IntEnum):
+        NEAREST = 9728
+        LINEAR = 9729
+        NEAREST_MIPMAP_NEAREST = 9984
+        LINEAR_MIPMAP_NEAREST = 9985
+        NEAREST_MIPMAP_LINEAR = 9986
+        LINEAR_MIPMAP_LINEAR = 9987
+
+    class Wrap(IntEnum):
+        CLAMP_TO_EDGE = 33071
+        MIRRORED_REPEAT = 33648
+        REPEAT = 10497
 
     magFilter: MagFilter | None = None
     """"Magnification filter."""
