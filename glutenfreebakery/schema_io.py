@@ -28,6 +28,8 @@ from attrs import Attribute, fields
 
 from .schema import (
     Accessor,
+    AccessorSparseIndices,
+    AccessorSparseValues,
     Animation,
     AnimationChannel,
     AnimationChannels,
@@ -53,12 +55,9 @@ from .schema import (
     Sampler,
     Scene,
     Skin,
-    SparseIndices,
-    SparseValues,
     Texture,
     TextureInfo,
     UriBuffer,
-    Wrap,
 )
 from .util import encode_data_uri
 
@@ -225,7 +224,7 @@ def _fix_prop(o: GltfProperty, data: Any):
             _fix_prop(sparse.indices, data)
             _fix_prop(sparse.values, data)
 
-    elif isinstance(o, (SparseIndices, SparseValues, Image)):
+    elif isinstance(o, (AccessorSparseIndices, AccessorSparseValues, Image)):
         if isinstance(o.bufferView, int):
             o.bufferView = data["bufferViews"][o.bufferView]
 
@@ -588,8 +587,8 @@ def normalize_json_dict(data: dict[str, Any]):
             normalize_textures(pbr, "baseColorTexture", "metallicRoughnessTexture")
 
     for sampler in data.get("samplers", []):
-        pop_if(sampler, "wrapS", Wrap.REPEAT)
-        pop_if(sampler, "wrapT", Wrap.REPEAT)
+        pop_if(sampler, "wrapS", Sampler.Wrap.REPEAT)
+        pop_if(sampler, "wrapT", Sampler.Wrap.REPEAT)
 
     for k in ("extensionsUsed", "extensionsRequired"):
         if k in data:

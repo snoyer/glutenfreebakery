@@ -5,12 +5,10 @@ from pytest import mark, raises
 from glutenfreebakery import Gltf2
 from glutenfreebakery.schema import (
     Accessor,
-    AccessorType,
     Animation,
     Attributes,
     BufferView,
     Camera,
-    ComponentType,
     DataBuffer,
     GltfRoot,
     Image,
@@ -22,7 +20,6 @@ from glutenfreebakery.schema import (
     Sampler,
     Scene,
     Skin,
-    Target,
     Texture,
     UriBuffer,
 )
@@ -102,7 +99,7 @@ def test_scene_nodes_field_converter():
 
 def test_Attributes_is_MutableMapping():
     POSITION, NORMAL, TANGENT, TEXCOORD_0, TEXCOORD_1, COLOR_0, JOINTS_0, WEIGHTS_0 = (
-        Accessor(ComponentType.BYTE, 2, AccessorType.SCALAR) for _ in range(8)
+        Accessor(Accessor.ComponentType.BYTE, 2, Accessor.Type.SCALAR) for _ in range(8)
     )
     attrs = Attributes(
         POSITION=POSITION,
@@ -133,7 +130,7 @@ def test_Attributes_is_MutableMapping():
 
 def test_Attributes_properties():
     POSITION, NORMAL, TANGENT, TEXCOORD_0, TEXCOORD_1, COLOR_0, JOINTS_0, WEIGHTS_0 = (
-        Accessor(ComponentType.BYTE, 2, AccessorType.SCALAR) for _ in range(8)
+        Accessor(Accessor.ComponentType.BYTE, 2, Accessor.Type.SCALAR) for _ in range(8)
     )
     attrs = Attributes()
 
@@ -212,11 +209,11 @@ def test_load():
 )
 def test_trisrip_cube(buffer: UriBuffer):
     accessor = Accessor(
-        componentType=ComponentType.FLOAT,
+        componentType=Accessor.ComponentType.FLOAT,
         count=14,
-        type=AccessorType.VEC3,
+        type=Accessor.Type.VEC3,
         bufferView=BufferView(
-            buffer=buffer, byteLength=168, target=Target.ARRAY_BUFFER
+            buffer=buffer, byteLength=168, target=BufferView.Target.ARRAY_BUFFER
         ),
         min=[-1.0, -1.0, -1.0],
         max=[1.0, 1.0, 1.0],
