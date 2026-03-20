@@ -298,7 +298,9 @@ def _load_class(cls: Type[GltfPropertyT], data: Any) -> GltfPropertyT:
         return _prop_from_dict(
             cls,
             data,
-            primitives=[_load_class(MeshPrimitive, v) for v in data.get("primitives", [])],
+            primitives=[
+                _load_class(MeshPrimitive, v) for v in data.get("primitives", [])
+            ],
         )
     if issubclass(cls, Animation):
         samplers = [_load_class(AnimationSampler, v) for v in data["samplers"]]
