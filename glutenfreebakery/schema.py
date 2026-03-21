@@ -433,7 +433,7 @@ class TextureInfo(GltfProperty):
 
 
 @define
-class PbrMetallicRoughness(GltfProperty):
+class MaterialPbrMetallicRoughness(GltfProperty):
     """A set of parameter values that are used to define the metallic-roughness material model from Physically-Based Rendering (PBR) methodology."""
 
     baseColorFactor: tuple[float, float, float, float] = (1, 1, 1, 1)
@@ -449,7 +449,7 @@ class PbrMetallicRoughness(GltfProperty):
 
 
 @define
-class OcclusionTextureInfo(TextureInfo):
+class MaterialOcclusionTextureInfo(TextureInfo):
     """Material Occlusion Texture Info"""
 
     strength: float = 1
@@ -457,7 +457,7 @@ class OcclusionTextureInfo(TextureInfo):
 
 
 @define
-class NormalTextureInfo(TextureInfo):
+class MaterialNormalTextureInfo(TextureInfo):
     """Material Normal Texture Info"""
 
     scale: float = 1
@@ -466,6 +466,8 @@ class NormalTextureInfo(TextureInfo):
 
 @define
 class Material(GltfChildOfRootProperty):
+    """The material appearance of a primitive."""
+
     class AlphaMode(Enum):
         OPAQUE = "OPAQUE"
         """The alpha value is ignored, and the rendered output is fully opaque."""
@@ -474,11 +476,11 @@ class Material(GltfChildOfRootProperty):
         BLEND = "BLEND"
         """The alpha value is used to composite the source and destination areas. The rendered output is combined with the background using the normal painting operation (i.e. the Porter and Duff over operator)."""
 
-    pbrMetallicRoughness: PbrMetallicRoughness | None = None
+    pbrMetallicRoughness: MaterialPbrMetallicRoughness | None = None
     """A set of parameter values that are used to define the metallic-roughness material model from Physically Based Rendering (PBR) methodology. When undefined, all the default values of `pbrMetallicRoughness` **MUST** apply."""
-    normalTexture: NormalTextureInfo | None = None
+    normalTexture: MaterialNormalTextureInfo | None = None
     """The tangent space normal texture. The texture encodes RGB components with linear transfer function. Each texel represents the XYZ components of a normal vector in tangent space. The normal vectors use the convention +X is right and +Y is up. +Z points toward the viewer. If a fourth component (A) is present, it **MUST** be ignored. When undefined, the material does not have a tangent space normal texture."""
-    occlusionTexture: OcclusionTextureInfo | None = None
+    occlusionTexture: MaterialOcclusionTextureInfo | None = None
     """The occlusion texture. The occlusion values are linearly sampled from the R channel. Higher values indicate areas that receive full indirect lighting and lower values indicate no indirect lighting. If other channels are present (GBA), they **MUST** be ignored for occlusion calculations. When undefined, the material does not have an occlusion texture."""
     emissiveTexture: TextureInfo | None = None
     """The emissive texture. It controls the color and intensity of the light being emitted by the material. This texture contains RGB components encoded with the sRGB transfer function. If a fourth component (A) is present, it **MUST** be ignored. When undefined, the texture **MUST** be sampled as having `1.0` in RGB components."""
