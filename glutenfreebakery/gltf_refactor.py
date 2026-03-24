@@ -14,6 +14,30 @@ def embed_external_images_as_data_uri(gltf: GltfRoot, relative_to: Path | None =
             image.uri = encode_data_uri(image_data, image.mimeType or mime_type)
 
 
+def prune_data_buffers(gltf: GltfRoot):
+    ranges_by_buffer: dict[int, tuple[DataBuffer, set[tuple[int, int]]]] = {
+        id(buffer): (buffer, set())
+        for buffer in gltf.buffers
+        if isinstance(buffer, DataBuffer)
+    }
+
+    for view in gltf.bufferViews:
+        try:
+            start = view.byteOffset
+            end = start + view.byteLength
+            ranges_by_buffer[id(view.buffer)][1].add((start, end))
+        except KeyError:
+            pass
+
+    for buffer, intervals in ranges_by_buffer.values():
+        trim_data_buffer(
+            gltf,
+            buffer,
+            [(0, buffer.byteLength)],
+            ranges_to_keep=intervals_union(intervals),
+        )
+
+
 def trim_data_buffer(
     gltf: GltfRoot,
     buffer: DataBuffer,

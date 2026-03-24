@@ -47,6 +47,7 @@ def convert(input: Path, output: Path) -> None:
 
     if output.suffix.lower() == ".glb":
         gltf.embed_resources()
+        gltf.merge_data_buffers()
     elif output.suffix.lower() == ".gltf":
         gltf.extract_resources(output.parent, f"{output.stem}.")
 
