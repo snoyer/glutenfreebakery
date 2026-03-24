@@ -8,6 +8,7 @@ from .gltf_refactor import (
     embed_external_images_as_data_uri,
     extract_resources,
     merge_data_buffers,
+    prune_data_buffers,
 )
 from .schema import GltfRoot
 from .schema_io import (
@@ -58,11 +59,11 @@ class Gltf2(GltfRoot):
             self, relative_to=relative_to or _source_dir(self)
         )
 
-    def embed_resources(self, *, relative_to: Path | None = None, merge: bool = True):
-        embed_external_buffers(self, relative_to=relative_to or _source_dir(self))
-        embed_external_images(self, relative_to=relative_to or _source_dir(self))
-        if merge:
-            merge_data_buffers(self)
+    def embed_resources(self, *, relative_to: Path | None = None):
+        """Replace URI buffers with data buffers by reading or downloading the data if needed."""
+        relative_to = relative_to or _source_dir(self)
+        embed_external_buffers(self, relative_to)
+        embed_external_images(self, relative_to)
 
     def extract_resources(
         self,
@@ -79,6 +80,16 @@ class Gltf2(GltfRoot):
             relative_to or _source_dir(self),
             base_name=base_name or "",
         )
+
+    def merge_data_buffers(self):
+        """Combine all data buffers into a single one.
+        The resulting buffer is inserted as the first buffer to be compatible with GLB encoding."""
+        merge_data_buffers(self)
+
+    def prune_data_buffers(self):
+        """Remove unused parts from data buffers.
+        Unused parts are sections that are not referenced by any buffer views."""
+        prune_data_buffers(self)
 
 
 def _source_dir(gltf: Gltf2):

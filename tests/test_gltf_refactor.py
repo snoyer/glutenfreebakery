@@ -81,11 +81,12 @@ def test_embed_external_buffers():
     assert isinstance(gltf.buffers[0], DataBuffer)
 
 
-def test_embed_resources():
+def test_embed_resources_and_merge():
     DIR = Path(__file__).parent / "data/small/"
     gltf = Gltf2.Read(DIR / "two-textured-quads.gltf")
 
     gltf.embed_resources()
+    gltf.merge_data_buffers()
 
     assert not gltf.images[0].uri
     assert not gltf.images[1].uri
@@ -94,11 +95,11 @@ def test_embed_resources():
     assert isinstance(gltf.buffers[0], DataBuffer)
 
 
-def test_embed_resources_no_merge():
+def test_embed_resources():
     DIR = Path(__file__).parent / "data/small/"
     gltf = Gltf2.Read(DIR / "two-textured-quads.gltf")
 
-    gltf.embed_resources(merge=False)
+    gltf.embed_resources()
 
     assert not gltf.images[0].uri
     assert not gltf.images[1].uri
@@ -132,6 +133,7 @@ def test_embed_then_extract_resources():
     DIR = Path(__file__).parent / "data/small/"
     gltf = Gltf2.Read(DIR / "two-textured-quads.gltf")
     gltf.embed_resources()
+    gltf.merge_data_buffers()
 
     buffer0 = gltf.buffers[0]
     assert isinstance(buffer0, DataBuffer)
@@ -248,6 +250,32 @@ def test_merge_all_data_buffers():
     assert views[0].byteOffset == 0
     assert views[1].byteOffset == 20
     assert views[2].byteOffset == 50
+
+
+def test_prune_data_buffers():
+    data1 = bytes(i for i in range(50))
+    data2 = bytes(0xFF - i for i in range(50))
+
+    buffer1 = DataBuffer(data1)
+    buffer2 = DataBuffer(data2)
+
+    gltf = Gltf2(
+        bufferViews=[
+            BufferView(buffer1, byteOffset=10, byteLength=10),
+            BufferView(buffer1, byteOffset=20, byteLength=5),
+            BufferView(buffer1, byteOffset=35, byteLength=10),
+            BufferView(UriBuffer(0, ""), byteLength=0),
+            BufferView(buffer2, byteLength=20),
+        ]
+    )
+
+    assert len(gltf.buffers) == 3
+
+    gltf.prune_data_buffers()
+
+    assert len(gltf.buffers) == 3
+    assert buffer1.data == data1[10:20] + data1[20:25] + data1[35:45]
+    assert buffer2.data == data2[:20]
 
 
 @mark.parametrize(
