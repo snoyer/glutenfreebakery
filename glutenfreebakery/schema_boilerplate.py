@@ -76,9 +76,14 @@ class PartiallyImplicitList(Generic[T, P], Sequence[T]):
 
         return f"<{type(self).__name__}([{f(self.explicit)}]+[{f(self.implicit)}])>"
 
-    def replace(self, f: Callable[[T], T | None]):
-        self._replace_implicits(f)
-        self._replace_explicits(f)
+    def replace(self, transform: Callable[[T], T | None]):
+        """Replace each item with the result of the `transform` function applied to it."""
+        self._replace_implicits(transform)
+        self._replace_explicits(transform)
+
+    def remove(self, predicate: Callable[[T], bool]):
+        """Remove all items matching the `predicate` function."""
+        return self.replace(lambda item: None if predicate(item) else item)
 
     def _replace_implicits(self, f: Callable[[T], T | None]) -> None:
         raise NotImplementedError()  # pragma: nocover
