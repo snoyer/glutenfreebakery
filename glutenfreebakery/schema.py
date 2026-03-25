@@ -746,7 +746,7 @@ class Buffers(GltfChildOfRootPropertyArray[Buffer]):
                 if (new_buffer := f(view.buffer)) is not None:
                     view.buffer = new_buffer
                 else:
-                    raise ValueError("cannot replace None buffer")
+                    raise ValueError("cannot replace buffer with None")
 
 
 class Materials(GltfChildOfRootPropertyArray[Material]):
@@ -773,6 +773,18 @@ class Nodes(GltfChildOfRootPropertyArray[Node]):
                     yield node
                     if children := node.children:
                         q = children + q
+
+    def _replace_implicits(self, f: Callable[[Node], Node | None]) -> None:
+        def replace_nodes(nodes: Iterable[Node]):
+            for node in nodes:
+                if (new_node := f(node)) is not None:
+                    if new_node.children:
+                        new_node.children = replace_nodes(new_node.children)
+                    yield node
+
+        if self.parent:
+            for scene in self.parent.scenes:
+                scene.nodes = replace_nodes(scene.nodes)
 
 
 class Textures(GltfChildOfRootPropertyArray[Texture]):

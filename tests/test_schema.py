@@ -348,3 +348,28 @@ def test_replace_buffers_error():
         gltf.buffers.replace(lambda b: None)
 
     assert "cannot replace" in str(e)
+
+
+def test_remove_nodes():
+    gltf = Gltf2(
+        scene=Scene(
+            nodes=[
+                Node(name="A"),
+                Node(name="B"),
+                Node(children=[Node(name="C1"), Node(name="C2")], name="C"),
+                Node(
+                    children=[
+                        Node(name="D1"),
+                        Node(children=[Node(name="D2a"), Node(name="D2b")], name="D2"),
+                    ],
+                    name="D",
+                ),
+            ]
+        )
+    )
+
+    assert len(gltf.nodes) == 10
+
+    gltf.nodes.remove(lambda node: node.name in ("A", "C2", "D2"))
+
+    assert {node.name for node in gltf.nodes} == {"B", "C", "C1", "D", "D1"}
