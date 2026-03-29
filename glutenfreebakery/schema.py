@@ -68,6 +68,7 @@ def _fix_prop_array(
     converted = attribute.converter(value)
     if isinstance(converted, PropertyArray):
         converted.parent = instance
+    converted.make_implicit()
     return converted
 
 
@@ -695,7 +696,9 @@ class Scene(GltfChildOfRootProperty):
 
 
 class Cameras(GltfChildOfRootPropertyArray[Camera]):
-    pass
+    def _from_parent(self, parent: GltfRoot) -> Iterator[Camera | None]:
+        for node in parent.nodes:
+            yield node.camera
 
 
 class Animations(GltfChildOfRootPropertyArray[Animation]):

@@ -243,7 +243,8 @@ def test_merge_all_data_buffers():
     assert len(gltf.buffers) == 3
 
     buffer = gltf.buffers[0]
-    assert isinstance(buffer, DataBuffer) and buffer.data == data1 + data2 + data3
+    assert isinstance(buffer, DataBuffer)
+    assert buffer.data == data1 + data2 + data3
 
     views = [view for view in gltf.bufferViews if view.buffer == buffer]
     assert len(views) == 3
@@ -276,6 +277,23 @@ def test_prune_data_buffers():
     assert len(gltf.buffers) == 3
     assert buffer1.data == data1[10:20] + data1[20:25] + data1[35:45]
     assert buffer2.data == data2[:20]
+
+
+def test_prune_data_buffers_imported():
+    DIR = Path(__file__).parent / "data/small/"
+    gltf = Gltf2.Read(DIR / "two-textured-quads.glb")
+
+    assert len(gltf.buffers) == 1
+    assert isinstance(gltf.buffers[0], DataBuffer) == 1
+    assert gltf.buffers[0].byteLength == 312
+
+    node0 = gltf.nodes[0]
+    gltf.nodes.remove(lambda node: node is node0)
+    gltf.prune_data_buffers()
+
+    assert len(gltf.buffers) == 1
+    assert isinstance(gltf.buffers[0], DataBuffer) == 1
+    assert gltf.buffers[0].byteLength == 202
 
 
 @mark.parametrize(

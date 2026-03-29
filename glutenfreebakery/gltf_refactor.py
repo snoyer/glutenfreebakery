@@ -191,7 +191,7 @@ def merge_data_buffers(gltf: GltfRoot):
                 pass
 
         gltf.buffers.replace(lambda b: None if b in data_buffers else b)
-        gltf.buffers.explicit.insert(0, combined_buffer)
+        gltf.buffers.insert(0, combined_buffer)
 
 
 def intervals_union(xs: Iterable[tuple[int, int]]):

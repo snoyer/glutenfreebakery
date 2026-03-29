@@ -1,11 +1,11 @@
 import logging
 import sys
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from io import BytesIO
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from threading import Thread
 from urllib.error import URLError
-from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from pytest import LogCaptureFixture, mark, raises
 
@@ -173,3 +173,14 @@ def test_write_glb_multiple_data_buffers():
     with raises(IOError) as e:
         gltf.write(BytesIO())
     assert "only the first buffer can be a data buffer" in str(e)
+
+
+def test_implicit_properties_on_read():
+    DIR = Path(__file__).parent / "data/small/"
+    gltf = Gltf2.Read(DIR / "two-textured-quads.glb")
+
+    assert "explicit" not in str(gltf.accessors)
+    assert "explicit" not in str(gltf.buffers)
+    assert "explicit" not in str(gltf.bufferViews)
+    assert "explicit" not in str(gltf.meshes)
+    assert "explicit" not in str(gltf.nodes)

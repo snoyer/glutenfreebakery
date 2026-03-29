@@ -154,19 +154,19 @@ def write_glb_chunks(
 
 
 PROP_LISTS = [
-    ("buffers", UriBuffer),
-    ("bufferViews", BufferView),
-    ("accessors", Accessor),
-    ("images", Image),
-    ("samplers", Sampler),
-    ("textures", Texture),
-    ("materials", Material),
-    ("meshes", Mesh),
-    ("cameras", Camera),
+    ("scenes", Scene),
+    ("animations", Animation),
     ("nodes", Node),
     ("skins", Skin),
-    ("animations", Animation),
-    ("scenes", Scene),
+    ("cameras", Camera),
+    ("meshes", Mesh),
+    ("materials", Material),
+    ("textures", Texture),
+    ("samplers", Sampler),
+    ("images", Image),
+    ("accessors", Accessor),
+    ("bufferViews", BufferView),
+    ("buffers", UriBuffer),
 ]
 
 
@@ -410,6 +410,10 @@ class Writer:
                 if not isinstance(value, GltfProperty) and value == default_value:
                     continue
 
+                if value is None:
+                    logger.warning("found null value for %r, ignoring", name)
+                    continue
+
                 if isinstance(o, TextureInfo) and name == "texture":
                     name = "index"
 
@@ -459,14 +463,32 @@ class Writer:
         if isinstance(o, GltfProperty):
             return cls.prop_to_dict(o, parents)
 
-        if isinstance(o, Mapping):
-            kvs = cast(Mapping[Any, Any], o)
-            return {k: cls.value_to_dict(v, (*parents, kvs)) for k, v in kvs.items()}
         if isinstance(o, bytes):
             raise ValueError("cannot encode bytes")
+
+        if isinstance(o, Mapping):
+
+            def dict_items():
+                kvs = cast(Mapping[Any, Any], o)
+                for k, v in kvs.items():
+                    if v is None:
+                        logger.warning("found null value for %r, ignoring", k)
+                    else:
+                        yield k, cls.value_to_dict(v, (*parents, kvs))
+
+            return dict(dict_items())
+
         if isinstance(o, Iterable):
-            xs = cast(Iterable[Any], o)
-            return [cls.value_to_dict(x, (*parents, xs)) for x in xs]
+
+            def list_items():
+                xs = cast(Iterable[Any], o)
+                for x in xs:
+                    if x is None:
+                        logger.warning("found null value, ignoring")
+                    else:
+                        yield cls.value_to_dict(x, (*parents, xs))
+
+            return list(list_items())
 
         raise ValueError(o)
 
