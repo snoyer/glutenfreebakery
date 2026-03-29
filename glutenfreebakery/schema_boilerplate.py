@@ -1,6 +1,15 @@
 import sys
 from itertools import chain, islice
-from typing import Callable, Generic, Iterable, Iterator, Sequence, TypeVar, overload
+from typing import (
+    Callable,
+    Counter,
+    Generic,
+    Iterable,
+    Iterator,
+    Sequence,
+    TypeVar,
+    overload,
+)
 
 T = TypeVar("T")
 P = TypeVar("P")
@@ -14,7 +23,16 @@ class PartiallyImplicitList(Generic[T, P], Sequence[T]):
         parent: P | None = None,
     ) -> None:
         self.parent = parent
-        self.explicit: list[T] = list(items) if items else []
+        self.explicit = list(items) if items else []
+        self._preferred_order = {id(item): i for i, item in enumerate(self.explicit)}
+        self.make_implicit()
+
+    def make_implicit(self):
+        """Remove implicit items from explicit list."""
+        implicit_ids = {id(x) for x in self.implicit}
+        self.explicit = list(
+            unique_by_id(x for x in self.explicit if id(x) not in implicit_ids)
+        )
 
     def __bool__(self):
         for _ in self:
@@ -36,7 +54,11 @@ class PartiallyImplicitList(Generic[T, P], Sequence[T]):
         return n
 
     def __iter__(self) -> Iterator[T]:
-        return iter(unique_by_id(chain(self.explicit, self.implicit)))
+        def sort_key(item: T):
+            return self._preferred_order.get(id(item), float("+inf"))
+
+        unique = unique_by_id(chain(self.explicit, self.implicit))
+        return iter(sorted(unique, key=sort_key))
 
     @overload
     def __getitem__(self, index: int) -> T: ...
@@ -58,8 +80,14 @@ class PartiallyImplicitList(Generic[T, P], Sequence[T]):
                 return i
         raise IndexError(value)
 
+    def insert(self, index: int, item: T):
+        self.explicit.insert(index, item)
+        self._preferred_order[id(item)] = index
+        self.make_implicit()
+
     def __iadd__(self, other: Iterable[T]):
         self.explicit += other
+        self.make_implicit()
         return self
 
     def __eq__(self, value: object, /) -> bool:
@@ -70,11 +98,13 @@ class PartiallyImplicitList(Generic[T, P], Sequence[T]):
         except (ValueError, TypeError):
             return False
 
-    def __repr__(self) -> str:
-        def f(xs: Iterable[T]):
-            return ", ".join(f"<{type(x).__name__} object at 0x{id(x):0x}>" for x in xs)
+    def __str__(self) -> str:
+        def f(xs: Iterable[T], label: str):
+            for t, n in Counter(map(type, xs)).items():
+                yield f"{n} {label} {t.__name__}"
 
-        return f"<{type(self).__name__}([{f(self.explicit)}]+[{f(self.implicit)}])>"
+        items = chain(f(self.explicit, "explicit"), f(self.implicit, "implicit"))
+        return f"<{type(self).__name__}({', '.join(items)})>"
 
     def replace(self, transform: Callable[[T], T | None]):
         """Replace each item with the result of the `transform` function applied to it."""
