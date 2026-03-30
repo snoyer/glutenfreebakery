@@ -783,7 +783,7 @@ class Nodes(GltfChildOfRootPropertyArray[Node]):
                 if (new_node := f(node)) is not None:
                     if new_node.children:
                         new_node.children = replace_nodes(new_node.children)
-                    yield node
+                    yield new_node
 
         if self.parent:
             for scene in self.parent.scenes:
