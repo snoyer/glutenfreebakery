@@ -372,9 +372,7 @@ def test_replace_nodes():
 
     gltf.nodes.replace(
         lambda node: (
-            Node(name=f"xxx{node.name}")
-            if node.name in ("A", "C2", "D2")
-            else node
+            Node(name=f"xxx{node.name}") if node.name in ("A", "C2", "D2") else node
         )
     )
 
